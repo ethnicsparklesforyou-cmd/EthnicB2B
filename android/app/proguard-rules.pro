@@ -24,7 +24,7 @@
 -keep class com.swmansion.gesturehandler.** { *; }
 
 # Keep app classes
--keep class com.jwelleryapp.** { *; }
+-keep class com.ethnicsparkles.business.** { *; }
 
 # Kotlin
 -keep class kotlin.** { *; }

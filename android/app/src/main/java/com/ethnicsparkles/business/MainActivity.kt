@@ -1,4 +1,4 @@
-package com.jwelleryapp
+package com.ethnicsparkles.business
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
