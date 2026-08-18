@@ -79,25 +79,24 @@ jobs:
                      -archivePath build/JwelleryApp.xcarchive \
                      archive \
                      DEVELOPMENT_TEAM=693374F6BN \
-                     CODE_SIGN_STYLE=Automatic \
-                     -allowProvisioningUpdates || true
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY=""
 
-      - name: Export IPA Package
+      - name: Package Archive Zip
         run: |
+          mkdir -p build/out
           if [ -d "build/JwelleryApp.xcarchive" ]; then
-            xcodebuild -exportArchive \
-                       -archivePath build/JwelleryApp.xcarchive \
-                       -exportOptionsPlist ios/ExportOptions.plist \
-                       -exportPath build/out \
-                       -allowProvisioningUpdates || true
+            cd build
+            zip -r out/JwelleryApp.xcarchive.zip JwelleryApp.xcarchive
           fi
 
-      - name: Save IPA Build Artifact
+      - name: Save Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app-store-bundle
-          path: build/out/*.ipa
-          if-no-files-found: ignore
+          name: ios-app-bundle
+          path: build/out/*
+          if-no-files-found: warn
 
       - name: Upload to App Store Connect
         env:
