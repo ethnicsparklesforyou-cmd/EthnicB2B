@@ -37,7 +37,19 @@ jobs:
       - name: Create React Native JS Bundle
         run: npm run bundle:ios
 
-      - name: Build Xcode Archive
+      - name: Setup App Store Connect API Key
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          echo "KEY_PATH=$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8" >> $GITHUB_ENV
+
+      - name: Build Xcode Archive with Automatic Signing
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           xcodebuild -workspace ios/JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
@@ -46,21 +58,25 @@ jobs:
                      -archivePath build/JwelleryApp.xcarchive \
                      archive \
                      DEVELOPMENT_TEAM=693374F6BN \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_IDENTITY=""
+                     CODE_SIGN_STYLE=Automatic \
+                     -allowProvisioningUpdates \
+                     -authenticationKeyID "$KEY_ID" \
+                     -authenticationKeyIssuerID "$ISSUER_ID" \
+                     -authenticationKeyPath "$KEY_PATH"
 
-      - name: Create Valid IPA Package
+      - name: Export Signed IPA Package
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
-          mkdir -p build/out/Payload
-          if [ -d "build/JwelleryApp.xcarchive/Products/Applications/JwelleryApp.app" ]; then
-            cp -r build/JwelleryApp.xcarchive/Products/Applications/JwelleryApp.app build/out/Payload/
-            cd build/out
-            zip -r JwelleryApp.ipa Payload
-          elif [ -d "build/JwelleryApp.xcarchive" ]; then
-            cd build
-            zip -r out/JwelleryApp.xcarchive.zip JwelleryApp.xcarchive
-          fi
+          xcodebuild -exportArchive \
+                     -archivePath build/JwelleryApp.xcarchive \
+                     -exportOptionsPlist ios/ExportOptions.plist \
+                     -exportPath build/out \
+                     -allowProvisioningUpdates \
+                     -authenticationKeyID "$KEY_ID" \
+                     -authenticationKeyIssuerID "$ISSUER_ID" \
+                     -authenticationKeyPath "$KEY_PATH"
 
       - name: Save Build Artifacts
         uses: actions/upload-artifact@v4
@@ -73,16 +89,10 @@ jobs:
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         if: env.KEY_ID != ''
         run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
-          echo "App Store Connect API Key installed successfully!"
-          
-          IPA_FILE=$(ls build/out/*.ipa 2>/dev/null | head -n 1 || ls build/out/*.zip | head -n 1)
+          IPA_FILE=$(ls build/out/*.ipa 2>/dev/null | head -n 1)
           echo "Uploading $IPA_FILE to App Store Connect..."
-
           xcrun altool --upload-app \
             -f "$IPA_FILE" \
             -t ios \
