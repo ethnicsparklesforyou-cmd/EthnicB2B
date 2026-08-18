@@ -37,34 +37,6 @@ jobs:
       - name: Create React Native JS Bundle
         run: npm run bundle:ios
 
-      - name: Set up Apple Keychain and Provisioning Profile
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          if [ -n "$BUILD_CERTIFICATE_BASE64" ]; then
-            CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-            PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-            echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-            echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
-
-            security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-            security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-            security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -T /usr/bin/codesign -T /usr/bin/productsign
-            security list-keychains -s $KEYCHAIN_PATH
-            
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          else
-            echo "No custom certificate provided in secrets; proceeding with build setup."
-          fi
-
       - name: Build Xcode Archive
         run: |
           xcodebuild -workspace ios/JwelleryApp.xcworkspace \
@@ -93,7 +65,7 @@ jobs:
           path: build/out/*
           if-no-files-found: warn
 
-      - name: Upload to App Store Connect
+      - name: Direct Upload to App Store Connect
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -101,9 +73,10 @@ jobs:
         if: env.KEY_ID != ''
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
-          echo -n "$API_KEY_BASE64" | base64 --decode -o ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          echo "$API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          echo "App Store Connect API Key installed successfully!"
           xcrun altool --upload-app \
-            -f build/out/*.ipa \
+            -f build/out/JwelleryApp.xcarchive.zip \
             -t ios \
             --apiKey "$KEY_ID" \
             --apiIssuer "$ISSUER_ID"
