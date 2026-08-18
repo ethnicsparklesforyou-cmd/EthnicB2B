@@ -10,7 +10,7 @@ on:
 jobs:
   build-ios:
     name: Build & Upload iOS App Store Bundle
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload to App Store Connect
-        if: ${{ secrets.APP_STORE_CONNECT_KEY_ID != '' }}
+        if: secrets.APP_STORE_CONNECT_KEY_ID != ''
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
