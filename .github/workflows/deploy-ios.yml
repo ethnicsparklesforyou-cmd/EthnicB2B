@@ -50,10 +50,14 @@ jobs:
                      CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGN_IDENTITY=""
 
-      - name: Package Archive Zip
+      - name: Create Valid IPA Package
         run: |
-          mkdir -p build/out
-          if [ -d "build/JwelleryApp.xcarchive" ]; then
+          mkdir -p build/out/Payload
+          if [ -d "build/JwelleryApp.xcarchive/Products/Applications/JwelleryApp.app" ]; then
+            cp -r build/JwelleryApp.xcarchive/Products/Applications/JwelleryApp.app build/out/Payload/
+            cd build/out
+            zip -r JwelleryApp.ipa Payload
+          elif [ -d "build/JwelleryApp.xcarchive" ]; then
             cd build
             zip -r out/JwelleryApp.xcarchive.zip JwelleryApp.xcarchive
           fi
@@ -75,8 +79,12 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
           echo "App Store Connect API Key installed successfully!"
+          
+          IPA_FILE=$(ls build/out/*.ipa 2>/dev/null | head -n 1 || ls build/out/*.zip | head -n 1)
+          echo "Uploading $IPA_FILE to App Store Connect..."
+
           xcrun altool --upload-app \
-            -f build/out/JwelleryApp.xcarchive.zip \
+            -f "$IPA_FILE" \
             -t ios \
             --apiKey "$KEY_ID" \
             --apiIssuer "$ISSUER_ID"
