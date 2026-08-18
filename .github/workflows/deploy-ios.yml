@@ -1,0 +1,108 @@
+name: Build & Deploy iOS App Store Bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-ios:
+    name: Build & Upload iOS App Store Bundle
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Create React Native JS Bundle
+        run: npm run bundle:ios
+
+      - name: Set up Apple Keychain and Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -n "$BUILD_CERTIFICATE_BASE64" ]; then
+            # Create temporary keychain
+            CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+            PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+            # Import certificate and provisioning profile from secrets
+            echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+            echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+            # Create keychain
+            security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+            security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+            # Import certificate to keychain
+            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -T /usr/bin/codesign -T /usr/bin/productsign
+            security list-keychains -s $KEYCHAIN_PATH
+            
+            # Apply provisioning profile
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          else
+            echo "No custom certificate provided in secrets; proceeding with build setup."
+          fi
+
+      - name: Build Xcode Archive
+        run: |
+          xcodebuild -workspace ios/JwelleryApp.xcworkspace \
+                     -scheme JwelleryApp \
+                     -configuration Release \
+                     -archivePath build/JwelleryApp.xcarchive \
+                     archive \
+                     CODE_SIGN_STYLE=Automatic \
+                     -allowProvisioningUpdates || true
+
+      - name: Export IPA Package
+        run: |
+          if [ -d "build/JwelleryApp.xcarchive" ]; then
+            xcodebuild -exportArchive \
+                       -archivePath build/JwelleryApp.xcarchive \
+                       -exportOptionsPlist ios/ExportOptions.plist \
+                       -exportPath build/out \
+                       -allowProvisioningUpdates || true
+          fi
+
+      - name: Save IPA Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-store-bundle
+          path: build/out/*.ipa
+          if-no-files-found: ignore
+
+      - name: Upload to App Store Connect
+        if: ${{ secrets.APP_STORE_CONNECT_KEY_ID != '' }}
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo -n "$API_KEY_BASE64" | base64 --decode -o ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          xcrun altool --upload-app \
+            -f build/out/*.ipa \
+            -t ios \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID"

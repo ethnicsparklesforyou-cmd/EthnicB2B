@@ -10,7 +10,9 @@
     "start:reset": "react-native start --reset-cache",
     "test": "jest",
     "build:android": "cd android && ./gradlew assembleRelease --no-daemon",
+    "build:android:bundle": "cd android && ./gradlew bundleRelease --no-daemon",
     "build:android:clean": "cd android && ./gradlew clean && ./gradlew assembleRelease --no-daemon",
+    "bundle:ios": "react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios",
     "clean": "cd android && ./gradlew clean"
   },
   "dependencies": {
