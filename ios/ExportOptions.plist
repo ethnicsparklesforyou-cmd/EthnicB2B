@@ -4,6 +4,8 @@
 <dict>
 	<key>method</key>
 	<string>app-store</string>
+	<key>teamID</key>
+	<string>693374F6BN</string>
 	<key>destination</key>
 	<string>export</string>
 	<key>signingStyle</key>

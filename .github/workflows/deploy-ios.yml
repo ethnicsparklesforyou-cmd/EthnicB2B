@@ -78,6 +78,7 @@ jobs:
                      -configuration Release \
                      -archivePath build/JwelleryApp.xcarchive \
                      archive \
+                     DEVELOPMENT_TEAM=693374F6BN \
                      CODE_SIGN_STYLE=Automatic \
                      -allowProvisioningUpdates || true
 
