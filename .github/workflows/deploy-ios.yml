@@ -59,6 +59,7 @@ jobs:
                      archive \
                      DEVELOPMENT_TEAM=693374F6BN \
                      CODE_SIGN_STYLE=Automatic \
+                     CODE_SIGN_IDENTITY="Apple Distribution" \
                      -allowProvisioningUpdates \
                      -authenticationKeyID "$KEY_ID" \
                      -authenticationKeyIssuerID "$ISSUER_ID" \
