@@ -60,6 +60,7 @@ jobs:
                      CODE_SIGN_IDENTITY="" \
                      SUPPORTED_PLATFORMS=iphoneos \
                      SDKROOT=iphoneos \
+                     TARGETED_DEVICE_FAMILY=1 \
                      ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
                      OTHER_ACTOOL_FLAGS="--warn-and-continue"
 
