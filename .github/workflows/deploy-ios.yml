@@ -33,6 +33,7 @@ jobs:
         run: |
           cd ios
           pod install
+          find Pods/Target\ Support\ Files -name "*.xcconfig" -exec sh -c 'echo "SUPPORTED_PLATFORMS = iphoneos" >> "$1"; echo "SDKROOT = iphoneos" >> "$1"; echo "TARGETED_DEVICE_FAMILY = 1" >> "$1"' _ {} \;
 
       - name: Create React Native JS Bundle
         run: npm run bundle:ios
