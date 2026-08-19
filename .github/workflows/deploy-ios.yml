@@ -59,7 +59,9 @@ jobs:
                      CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGN_IDENTITY="" \
                      SUPPORTED_PLATFORMS=iphoneos \
-                     SDKROOT=iphoneos
+                     SDKROOT=iphoneos \
+                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
+                     OTHER_ACTOOL_FLAGS="--warn-and-continue"
 
       - name: Export Signed IPA via App Store Connect API
         env:

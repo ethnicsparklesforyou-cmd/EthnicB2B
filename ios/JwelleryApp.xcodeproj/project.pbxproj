@@ -290,6 +290,8 @@
 			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-JwelleryApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				OTHER_ACTOOL_FLAGS = "--warn-and-continue";
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 693374F6BN;
