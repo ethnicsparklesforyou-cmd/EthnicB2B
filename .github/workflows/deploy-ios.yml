@@ -47,20 +47,8 @@ jobs:
           echo "$API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
           echo "KEY_PATH=$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8" >> $GITHUB_ENV
 
-      - name: Pre-compile Asset Catalog with Xcode 16.1
-        run: |
-          DEVELOPER_DIR=/Applications/Xcode_16.1.app xcrun actool \
-            --output-format human-readable-text \
-            --notices --warnings \
-            --app-icon AppIcon \
-            --compress-pngs \
-            --enable-on-demand-resources YES \
-            --development-region en \
-            --target-device iphone \
-            --minimum-deployment-target 15.1 \
-            --platform iphoneos \
-            --compile ios/JwelleryApp \
-            ios/JwelleryApp/Images.xcassets || true
+      - name: Install iOS Simulator Runtime for Xcode 16.2
+        run: xcodebuild -downloadPlatform iOS || true
 
       - name: Build Xcode Archive
         run: |
@@ -79,7 +67,6 @@ jobs:
                      SDKROOT=iphoneos \
                      TARGETED_DEVICE_FAMILY=1 \
                      ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-                     ASSETCATALOG_COMPILER_APPICON_NAME="" \
                      OTHER_ACTOOL_FLAGS="--warn-and-continue"
 
       - name: Export Signed IPA via App Store Connect API
