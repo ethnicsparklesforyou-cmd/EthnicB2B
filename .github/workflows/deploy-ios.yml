@@ -51,6 +51,7 @@ jobs:
           xcodebuild -workspace ios/JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -configuration Release \
+                     -sdk iphoneos \
                      -destination 'generic/platform=iOS' \
                      -archivePath build/JwelleryApp.xcarchive \
                      archive \
