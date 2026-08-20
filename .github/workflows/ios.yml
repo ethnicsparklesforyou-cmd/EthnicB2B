@@ -42,7 +42,7 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Validate & Reconstruct App Store Connect API Key
+      - name: Validate & Reconstruct App Store Connect API Key (.p8 PEM & DER check)
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY || secrets.APP_STORE_CONNECT_PRIVATE_KEY || secrets.APP_STORE_CONNECT_KEY || secrets.P8_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -50,35 +50,49 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           python3 -c "
-          import os, sys, textwrap
+          import os, sys, base64, textwrap
 
           raw = os.environ.get('APP_STORE_CONNECT_API_KEY', '').strip()
           key_id = os.environ.get('KEY_ID', '').strip()
           issuer_id = os.environ.get('ISSUER_ID', '').strip()
 
           if not key_id:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_KEY_ID is missing or empty!')
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_KEY_ID is missing!')
               sys.exit(1)
 
           if not issuer_id:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_ISSUER_ID is missing or empty!')
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_ISSUER_ID is missing!')
               sys.exit(1)
 
           if not raw:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_API_KEY is missing or empty!')
-              print('Please go to GitHub Repository -> Settings -> Secrets and variables -> Actions')
-              print('and add a secret named APP_STORE_CONNECT_API_KEY with the contents of your .p8 key file.')
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_API_KEY is missing!')
               sys.exit(1)
 
-          # Remove headers/footers/whitespace
+          # Auto-detect if raw input is base64 encoded
+          try:
+              decoded_attempt = base64.b64decode(raw).decode('utf-8', errors='ignore')
+              if 'PRIVATE KEY' in decoded_attempt:
+                  raw = decoded_attempt
+          except Exception:
+              pass
+
+          # Strip header, footer, and all whitespace
           clean = raw.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', '')
           clean = ''.join(clean.split())
 
-          if len(clean) < 100:
-              print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY secret seems invalid or incomplete! Body length is only {len(clean)} chars.')
+          # Validate base64 DER structure
+          try:
+              der = base64.b64decode(clean)
+              print(f'Validated DER byte count: {len(der)}')
+              if len(der) < 100:
+                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated! DER length is {len(der)} bytes (expected ~120-150 bytes).')
+                  print('Please open your AuthKey_.p8 file and copy its ENTIRE contents into GitHub Secrets APP_STORE_CONNECT_API_KEY.')
+                  sys.exit(1)
+          except Exception as e:
+              print(f'❌ ERROR: Cannot decode base64 key: {e}')
               sys.exit(1)
 
-          # Format into standard 64-char lines PEM
+          # Wrap base64 string to standard 64 chars per line
           wrapped = '\n'.join(textwrap.wrap(clean, 64))
           pem = f'-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n'
 
@@ -86,7 +100,7 @@ jobs:
           with open(target_path, 'w') as f:
               f.write(pem)
 
-          print(f'✅ Successfully validated and generated AuthKey_{key_id}.p8 ({len(pem)} bytes)')
+          print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
       - name: Build Archive
