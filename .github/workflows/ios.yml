@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-upload:
     name: Build & Upload to App Store
-    runs-on: macos-15
+    runs-on: macos-14
 
     steps:
       - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
       - name: Setup Xcode version
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.2'
+          xcode-version: '16.0'
 
       - name: Validate & Reconstruct App Store Connect API Key (.p8 PEM & DER check)
         env:
