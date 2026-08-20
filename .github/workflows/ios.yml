@@ -132,7 +132,6 @@ jobs:
 
       - name: Upload to App Store Connect
         env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
