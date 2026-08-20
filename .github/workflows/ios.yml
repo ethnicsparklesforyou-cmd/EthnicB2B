@@ -98,16 +98,19 @@ jobs:
           print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
+      - name: Download iOS Simulator Runtime
+        run: |
+          sudo xcodebuild -downloadPlatform iOS
+
       - name: Build Archive
         run: |
           cd ios
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
+                     -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     OTHER_ACTOOL_FLAGS="--platform iphoneos" \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
@@ -129,6 +132,7 @@ jobs:
 
       - name: Upload to App Store Connect
         env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
