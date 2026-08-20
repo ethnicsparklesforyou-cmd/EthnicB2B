@@ -104,7 +104,6 @@ jobs:
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
-                     -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
