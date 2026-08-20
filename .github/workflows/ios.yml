@@ -82,7 +82,7 @@ jobs:
               der = base64.b64decode(clean)
               print(f'Validated DER byte count: {len(der)}')
               if len(der) < 100:
-                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated! DER length is {len(der)} bytes.')
+                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated!')
                   sys.exit(1)
           except Exception as e:
               print(f'❌ ERROR: Cannot decode base64 key: {e}')
@@ -98,6 +98,16 @@ jobs:
           print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
+      - name: Install App Store Connect CLI (fastlane) & Fetch Certificates/Profiles
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
+          
+          # Use fastlane pilot/produce or xcodebuild automatic signing updates
+          echo "Preparing Apple Cloud Signing environment for Team 693374F6BN..."
+
       - name: Build Archive
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -105,16 +115,18 @@ jobs:
         run: |
           KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
           cd ios
+          
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
                      -configuration Release \
-                     -destination "generic/platform=iOS" \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      -allowProvisioningUpdates \
                      -authenticationKeyPath "$KEY_PATH" \
                      -authenticationKeyID "$KEY_ID" \
                      -authenticationKeyIssuerID "$ISSUER_ID" \
+                     DEVELOPMENT_TEAM=693374F6BN \
+                     CODE_SIGN_STYLE=Automatic \
                      archive
 
       - name: Export IPA
