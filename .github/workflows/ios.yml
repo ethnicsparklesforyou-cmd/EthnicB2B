@@ -42,7 +42,7 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Format & Setup App Store Connect API Key (.p8 PEM format)
+      - name: Reconstruct Valid App Store Connect API Key (.p8 PEM format)
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -50,22 +50,23 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           python3 -c "
-          import os, sys
-          raw_key = os.environ.get('APP_STORE_CONNECT_API_KEY', '').strip()
+          import os, textwrap
+          raw = os.environ.get('APP_STORE_CONNECT_API_KEY', '').strip()
           key_id = os.environ.get('KEY_ID', '').strip()
           
-          # Clean up quotes and carriage returns
-          raw_key = raw_key.replace('\\n', '\n').replace('\r', '').strip()
+          # Strip header, footer, and any whitespace
+          clean = raw.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', '')
+          clean = ''.join(clean.split())
           
-          if '-----BEGIN PRIVATE KEY-----' not in raw_key:
-              raw_key = '-----BEGIN PRIVATE KEY-----\n' + raw_key
-          if '-----END PRIVATE KEY-----' not in raw_key:
-              raw_key = raw_key + '\n-----END PRIVATE KEY-----'
+          # Wrap base64 string to 64 chars per line (Standard ASN.1 PEM specification)
+          wrapped = '\n'.join(textwrap.wrap(clean, 64))
+          pem = f'-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n'
           
           target_path = os.path.expanduser(f'~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8')
           with open(target_path, 'w') as f:
-              f.write(raw_key.strip() + '\n')
-          print(f'Successfully formatted AuthKey_{key_id}.p8 at {target_path}')
+              f.write(pem)
+          
+          print(f'Successfully formatted AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
       - name: Build Archive
