@@ -98,38 +98,18 @@ jobs:
           print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
-      - name: Install App Store Connect CLI (fastlane) & Fetch Certificates/Profiles
-        env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      - name: Build Archive (Skip Development Device Check)
         run: |
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
-          
-          # Use fastlane pilot/produce or xcodebuild automatic signing updates
-          echo "Preparing Apple Cloud Signing environment for Team 693374F6BN..."
-
-      - name: Build Archive
-        env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        run: |
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
           cd ios
-          
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     -allowProvisioningUpdates \
-                     -authenticationKeyPath "$KEY_PATH" \
-                     -authenticationKeyID "$KEY_ID" \
-                     -authenticationKeyIssuerID "$ISSUER_ID" \
-                     DEVELOPMENT_TEAM=693374F6BN \
-                     CODE_SIGN_STYLE=Automatic \
+                     CODE_SIGNING_ALLOWED=NO \
                      archive
 
-      - name: Export IPA
+      - name: Export IPA & App Store Sign
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
