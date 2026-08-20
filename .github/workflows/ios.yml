@@ -98,12 +98,13 @@ jobs:
           print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
-      - name: Build Archive (Skip Development Device Check)
+      - name: Build Archive
         run: |
           cd ios
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
+                     -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      CODE_SIGNING_ALLOWED=NO \
