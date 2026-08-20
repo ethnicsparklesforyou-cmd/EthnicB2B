@@ -106,6 +106,7 @@ jobs:
                      -sdk iphoneos \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
+                     OTHER_ACTOOL_FLAGS="--platform iphoneos" \
                      ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
