@@ -68,7 +68,6 @@ jobs:
               print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_API_KEY is missing!')
               sys.exit(1)
 
-          # Auto-detect if raw input is base64 encoded
           try:
               decoded_attempt = base64.b64decode(raw).decode('utf-8', errors='ignore')
               if 'PRIVATE KEY' in decoded_attempt:
@@ -76,23 +75,19 @@ jobs:
           except Exception:
               pass
 
-          # Strip header, footer, and all whitespace
           clean = raw.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', '')
           clean = ''.join(clean.split())
 
-          # Validate base64 DER structure
           try:
               der = base64.b64decode(clean)
               print(f'Validated DER byte count: {len(der)}')
               if len(der) < 100:
-                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated! DER length is {len(der)} bytes (expected ~120-150 bytes).')
-                  print('Please open your AuthKey_.p8 file and copy its ENTIRE contents into GitHub Secrets APP_STORE_CONNECT_API_KEY.')
+                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated! DER length is {len(der)} bytes.')
                   sys.exit(1)
           except Exception as e:
               print(f'❌ ERROR: Cannot decode base64 key: {e}')
               sys.exit(1)
 
-          # Wrap base64 string to standard 64 chars per line
           wrapped = '\n'.join(textwrap.wrap(clean, 64))
           pem = f'-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n'
 
@@ -114,6 +109,7 @@ jobs:
                      -scheme JwelleryApp \
                      -sdk iphoneos \
                      -configuration Release \
+                     -destination "generic/platform=iOS" \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      -allowProvisioningUpdates \
                      -authenticationKeyPath "$KEY_PATH" \
