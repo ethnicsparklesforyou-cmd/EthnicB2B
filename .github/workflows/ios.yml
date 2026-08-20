@@ -42,31 +42,51 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Reconstruct Valid App Store Connect API Key (.p8 PEM format)
+      - name: Validate & Reconstruct App Store Connect API Key
         env:
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY || secrets.APP_STORE_CONNECT_PRIVATE_KEY || secrets.APP_STORE_CONNECT_KEY || secrets.P8_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           python3 -c "
-          import os, textwrap
+          import os, sys, textwrap
+
           raw = os.environ.get('APP_STORE_CONNECT_API_KEY', '').strip()
           key_id = os.environ.get('KEY_ID', '').strip()
-          
-          # Strip header, footer, and any whitespace
+          issuer_id = os.environ.get('ISSUER_ID', '').strip()
+
+          if not key_id:
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_KEY_ID is missing or empty!')
+              sys.exit(1)
+
+          if not issuer_id:
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_ISSUER_ID is missing or empty!')
+              sys.exit(1)
+
+          if not raw:
+              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_API_KEY is missing or empty!')
+              print('Please go to GitHub Repository -> Settings -> Secrets and variables -> Actions')
+              print('and add a secret named APP_STORE_CONNECT_API_KEY with the contents of your .p8 key file.')
+              sys.exit(1)
+
+          # Remove headers/footers/whitespace
           clean = raw.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', '')
           clean = ''.join(clean.split())
-          
-          # Wrap base64 string to 64 chars per line (Standard ASN.1 PEM specification)
+
+          if len(clean) < 100:
+              print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY secret seems invalid or incomplete! Body length is only {len(clean)} chars.')
+              sys.exit(1)
+
+          # Format into standard 64-char lines PEM
           wrapped = '\n'.join(textwrap.wrap(clean, 64))
           pem = f'-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n'
-          
+
           target_path = os.path.expanduser(f'~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8')
           with open(target_path, 'w') as f:
               f.write(pem)
-          
-          print(f'Successfully formatted AuthKey_{key_id}.p8 ({len(pem)} bytes)')
+
+          print(f'✅ Successfully validated and generated AuthKey_{key_id}.p8 ({len(pem)} bytes)')
           "
 
       - name: Build Archive
