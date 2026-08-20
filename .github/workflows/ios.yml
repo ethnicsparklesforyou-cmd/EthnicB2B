@@ -42,41 +42,31 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Setup App Store Connect API Key
+      - name: Format & Setup App Store Connect API Key (.p8 PEM format)
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APP_STORE_CONNECT_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
-
-      - name: Decode & Import Provisioning Certificate (If provided)
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          if [ -n "$BUILD_CERTIFICATE_BASE64" ]; then
-            CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-            PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-            echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
-            echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $PP_PATH
-
-            security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-            security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-            security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -T /usr/bin/codesign
-            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-            security list-keychains -s $KEYCHAIN_PATH
-
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          fi
+          python3 -c "
+          import os, sys
+          raw_key = os.environ.get('APP_STORE_CONNECT_API_KEY', '').strip()
+          key_id = os.environ.get('KEY_ID', '').strip()
+          
+          # Clean up quotes and carriage returns
+          raw_key = raw_key.replace('\\n', '\n').replace('\r', '').strip()
+          
+          if '-----BEGIN PRIVATE KEY-----' not in raw_key:
+              raw_key = '-----BEGIN PRIVATE KEY-----\n' + raw_key
+          if '-----END PRIVATE KEY-----' not in raw_key:
+              raw_key = raw_key + '\n-----END PRIVATE KEY-----'
+          
+          target_path = os.path.expanduser(f'~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8')
+          with open(target_path, 'w') as f:
+              f.write(raw_key.strip() + '\n')
+          print(f'Successfully formatted AuthKey_{key_id}.p8 at {target_path}')
+          "
 
       - name: Build Archive
         env:
