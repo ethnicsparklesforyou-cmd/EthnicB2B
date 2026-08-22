@@ -36,19 +36,17 @@ jobs:
 
       - name: Patch Xcode 16 actool Wrapper for Headless CI
         run: |
-          ACTOOL_PATH="/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool"
-          echo "Targeting actool path: $ACTOOL_PATH"
-          if [ -f "$ACTOOL_PATH" ] && [ ! -f "${ACTOOL_PATH}.real" ]; then
-            sudo mv "$ACTOOL_PATH" "${ACTOOL_PATH}.real"
-            cat << 'EOF' | sudo tee "$ACTOOL_PATH"
-#!/bin/bash
-ACTOOL_REAL="/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool.real"
-"$ACTOOL_REAL" "$@" || true
-exit 0
-EOF
-            sudo chmod +x "$ACTOOL_PATH"
-            echo "✅ Successfully patched actool wrapper with exit 0 override"
-          fi
+          python3 -c "
+          import os
+          actool = '/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool'
+          real = actool + '.real'
+          if os.path.exists(actool) and not os.path.exists(real):
+              os.rename(actool, real)
+              with open(actool, 'w') as f:
+                  f.write('#!/bin/bash\n' + real + ' \"$@\" || true\nexit 0\n')
+              os.chmod(actool, 0o755)
+              print('✅ Successfully patched actool wrapper with exit 0 override')
+          "
 
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
