@@ -43,7 +43,9 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>We need your location to show relevant products and delivery options in your area.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
