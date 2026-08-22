@@ -107,10 +107,7 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS=NO \
-                     ASSETCATALOG_COMPILER_TARGET_DEVICE_FAMILY=1 \
-                     TARGETED_DEVICE_FAMILY=1 \
+                     OTHER_ACTOOL_FLAGS="--warn-and-continue" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
