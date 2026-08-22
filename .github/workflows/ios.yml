@@ -129,23 +129,17 @@ jobs:
           path: ${{ runner.temp }}/build/*.ipa
           if-no-files-found: warn
 
-      - name: Upload to App Store Connect via iTMSTransporter
+      - name: Upload to App Store Connect via xcrun altool
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           IPA_FILE=$(ls $RUNNER_TEMP/build/*.ipa 2>/dev/null | head -n 1)
-          echo "Uploading $IPA_FILE to App Store Connect via iTMSTransporter..."
+          echo "Found IPA: $IPA_FILE"
+          echo "Uploading to App Store Connect via xcrun altool..."
 
-          TRANSPORTER_PATH="/Applications/Xcode_16.4.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter"
-          if [ ! -f "$TRANSPORTER_PATH" ]; then
-            TRANSPORTER_PATH="$(find /Applications/Xcode*.app/Contents/SharedFrameworks/ContentDeliveryServices.framework -name "iTMSTransporter" 2>/dev/null | head -n 1)"
-          fi
-          echo "Using iTMSTransporter at: $TRANSPORTER_PATH"
-
-          "$TRANSPORTER_PATH" \
-            -m upload \
-            -assetPath "$IPA_FILE" \
-            -apiKey "$KEY_ID" \
-            -apiIssuer "$ISSUER_ID" \
-            -v e
+          xcrun altool --upload-app \
+            -f "$IPA_FILE" \
+            -t ios \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID"
