@@ -44,6 +44,10 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need your location to show relevant products and delivery options in your area.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to allow you to upload images for your profile or products.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera so you can take photos to upload.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>RCTNewArchEnabled</key>
