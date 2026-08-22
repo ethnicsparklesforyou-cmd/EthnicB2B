@@ -107,7 +107,7 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     OTHER_ACTOOL_FLAGS="--warn-and-continue --target-device iphone" \
+                     ASSETCATALOG_COMPILER_APPICON_NAME="" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
