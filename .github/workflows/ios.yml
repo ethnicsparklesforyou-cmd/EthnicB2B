@@ -29,6 +29,11 @@ jobs:
         with:
           xcode-version: '16.2'
 
+      - name: Prepare Xcode Asset Catalog & Simulator Runtimes
+        run: |
+          sudo mkdir -p /Library/Developer/CoreSimulator/Profiles/Runtimes
+          mkdir -p ~/Library/Developer/CoreSimulator/Profiles/Runtimes
+
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
         with:
@@ -107,11 +112,13 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     ASSETCATALOG_COMPILER_APPICON_NAME="" \
+                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
+                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS=NO \
+                     ASSETCATALOG_COMPILER_OTHER_FLAGS="--ignore-missing-assets" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
-      - name: Export & Direct Upload to App Store Connect
+      - name: Export IPA & App Store Sign
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -126,3 +133,11 @@ jobs:
                      -authenticationKeyPath "$KEY_PATH" \
                      -authenticationKeyID "$KEY_ID" \
                      -authenticationKeyIssuerID "$ISSUER_ID"
+
+      - name: Upload to App Store Connect
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
+          xcrun altool --upload-app -f $RUNNER_TEMP/build/*.ipa -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
