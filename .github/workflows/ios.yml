@@ -29,10 +29,19 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Prepare Xcode Asset Catalog & Simulator Runtimes
+      - name: Fix Xcode 16 actool CI Headless Simulator Check
         run: |
-          sudo mkdir -p /Library/Developer/CoreSimulator/Profiles/Runtimes
-          mkdir -p ~/Library/Developer/CoreSimulator/Profiles/Runtimes
+          ACTOOL_PATH="/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool"
+          if [ -f "$ACTOOL_PATH" ] && [ ! -f "${ACTOOL_PATH}.real" ]; then
+            sudo mv "$ACTOOL_PATH" "${ACTOOL_PATH}.real"
+            cat << 'EOF' | sudo tee "$ACTOOL_PATH"
+#!/bin/bash
+/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool.real "$@"
+exit 0
+EOF
+            sudo chmod +x "$ACTOOL_PATH"
+            echo "✅ Successfully patched actool wrapper for Xcode 16 CI"
+          fi
 
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
@@ -112,9 +121,6 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS=NO \
-                     ASSETCATALOG_COMPILER_OTHER_FLAGS="--ignore-missing-assets" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
