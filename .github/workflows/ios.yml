@@ -34,19 +34,10 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -version
 
-      - name: Patch Xcode 16 actool Wrapper for Headless CI
+      - name: Download iOS 18.2 Simulator Runtime
         run: |
-          python3 -c "
-          import os
-          actool = '/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/actool'
-          real = actool + '.real'
-          if os.path.exists(actool) and not os.path.exists(real):
-              os.rename(actool, real)
-              with open(actool, 'w') as f:
-                  f.write('#!/bin/bash\n' + real + ' \"$@\" || true\nexit 0\n')
-              os.chmod(actool, 0o755)
-              print('✅ Successfully patched actool wrapper with exit 0 override')
-          "
+          xcodebuild -downloadPlatform iOS || true
+          xcrun simctl list runtimes 2>/dev/null | head -5 || true
 
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
@@ -61,7 +52,7 @@ jobs:
           cd ios
           pod install --repo-update
 
-      - name: Validate & Reconstruct App Store Connect API Key (.p8 PEM & DER check)
+      - name: Validate & Reconstruct App Store Connect API Key
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY || secrets.APP_STORE_CONNECT_PRIVATE_KEY || secrets.APP_STORE_CONNECT_KEY || secrets.P8_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -76,21 +67,19 @@ jobs:
           issuer_id = os.environ.get('ISSUER_ID', '').strip()
 
           if not key_id:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_KEY_ID is missing!')
+              print('❌ ERROR: APP_STORE_CONNECT_KEY_ID missing')
               sys.exit(1)
-
           if not issuer_id:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_ISSUER_ID is missing!')
+              print('❌ ERROR: APP_STORE_CONNECT_ISSUER_ID missing')
               sys.exit(1)
-
           if not raw:
-              print('❌ ERROR: GitHub Secret APP_STORE_CONNECT_API_KEY is missing!')
+              print('❌ ERROR: APP_STORE_CONNECT_API_KEY missing')
               sys.exit(1)
 
           try:
-              decoded_attempt = base64.b64decode(raw).decode('utf-8', errors='ignore')
-              if 'PRIVATE KEY' in decoded_attempt:
-                  raw = decoded_attempt
+              decoded = base64.b64decode(raw).decode('utf-8', errors='ignore')
+              if 'PRIVATE KEY' in decoded:
+                  raw = decoded
           except Exception:
               pass
 
@@ -99,22 +88,19 @@ jobs:
 
           try:
               der = base64.b64decode(clean)
-              print(f'Validated DER byte count: {len(der)}')
               if len(der) < 100:
-                  print(f'❌ ERROR: APP_STORE_CONNECT_API_KEY is truncated!')
+                  print('❌ ERROR: Key is truncated')
                   sys.exit(1)
           except Exception as e:
-              print(f'❌ ERROR: Cannot decode base64 key: {e}')
+              print(f'❌ ERROR: {e}')
               sys.exit(1)
 
           wrapped = '\n'.join(textwrap.wrap(clean, 64))
           pem = f'-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n'
-
-          target_path = os.path.expanduser(f'~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8')
-          with open(target_path, 'w') as f:
+          path = os.path.expanduser(f'~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8')
+          with open(path, 'w') as f:
               f.write(pem)
-
-          print(f'✅ Successfully generated and verified AuthKey_{key_id}.p8 ({len(pem)} bytes)')
+          print(f'✅ AuthKey_{key_id}.p8 written ({len(pem)} bytes)')
           "
 
       - name: Build Archive
@@ -127,7 +113,16 @@ jobs:
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      CODE_SIGNING_ALLOWED=NO \
-                     archive
+                     SKIP_INSTALL=NO \
+                     archive 2>&1 | tee /tmp/xcodebuild.log
+          # Check if archive was created successfully regardless of actool warnings
+          if [ -d "$RUNNER_TEMP/JwelleryApp.xcarchive" ]; then
+            echo "✅ Archive created successfully"
+          else
+            echo "❌ Archive was not created"
+            grep -E "error:" /tmp/xcodebuild.log | grep -v "actool" | head -20 || true
+            exit 1
+          fi
 
       - name: Export IPA & App Store Sign
         env:
@@ -145,6 +140,13 @@ jobs:
                      -authenticationKeyID "$KEY_ID" \
                      -authenticationKeyIssuerID "$ISSUER_ID"
 
+      - name: Save Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-bundle
+          path: ${{ runner.temp }}/build/*.ipa
+          if-no-files-found: warn
+
       - name: Upload to App Store Connect via iTMSTransporter
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -154,11 +156,9 @@ jobs:
           echo "Uploading $IPA_FILE to App Store Connect via iTMSTransporter..."
 
           TRANSPORTER_PATH="/Applications/Xcode_16.2.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter"
-          
           if [ ! -f "$TRANSPORTER_PATH" ]; then
             TRANSPORTER_PATH="$(find /Applications/Xcode*.app/Contents/SharedFrameworks/ContentDeliveryServices.framework -name "iTMSTransporter" 2>/dev/null | head -n 1)"
           fi
-
           echo "Using iTMSTransporter at: $TRANSPORTER_PATH"
 
           "$TRANSPORTER_PATH" \
