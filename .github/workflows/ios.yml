@@ -142,16 +142,25 @@ EOF
                      -authenticationKeyID "$KEY_ID" \
                      -authenticationKeyIssuerID "$ISSUER_ID"
 
-      - name: Upload to App Store Connect
+      - name: Upload to App Store Connect via iTMSTransporter
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
           IPA_FILE=$(ls $RUNNER_TEMP/build/*.ipa 2>/dev/null | head -n 1)
-          echo "Uploading $IPA_FILE to App Store Connect via Xcode 16 upload-package..."
+          echo "Uploading $IPA_FILE to App Store Connect via iTMSTransporter..."
 
-          xcrun altool --upload-package "$IPA_FILE" \
-            --type ios \
-            --apiKey "$KEY_ID" \
-            --apiIssuer "$ISSUER_ID"
+          TRANSPORTER_PATH="/Applications/Xcode_16.2.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter"
+          
+          if [ ! -f "$TRANSPORTER_PATH" ]; then
+            TRANSPORTER_PATH="$(find /Applications/Xcode*.app/Contents/SharedFrameworks/ContentDeliveryServices.framework -name "iTMSTransporter" 2>/dev/null | head -n 1)"
+          fi
+
+          echo "Using iTMSTransporter at: $TRANSPORTER_PATH"
+
+          "$TRANSPORTER_PATH" \
+            -m upload \
+            -assetPath "$IPA_FILE" \
+            -apiKey "$KEY_ID" \
+            -apiIssuer "$ISSUER_ID" \
+            -v e
