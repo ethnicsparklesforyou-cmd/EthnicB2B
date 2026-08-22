@@ -24,20 +24,11 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Setup Xcode version
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.2'
-
-      - name: Select Active Xcode Developer Directory
+      - name: Select Xcode 16.4 (ships with iOS 18.5 SDK - matches runner runtimes)
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
           xcodebuild -version
-
-      - name: Download iOS 18.2 Simulator Runtime
-        run: |
-          xcodebuild -downloadPlatform iOS || true
-          xcrun simctl list runtimes 2>/dev/null | head -5 || true
+          xcrun simctl list runtimes 2>/dev/null | grep iOS | head -5 || true
 
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
@@ -113,16 +104,7 @@ jobs:
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      CODE_SIGNING_ALLOWED=NO \
-                     SKIP_INSTALL=NO \
-                     archive 2>&1 | tee /tmp/xcodebuild.log
-          # Check if archive was created successfully regardless of actool warnings
-          if [ -d "$RUNNER_TEMP/JwelleryApp.xcarchive" ]; then
-            echo "✅ Archive created successfully"
-          else
-            echo "❌ Archive was not created"
-            grep -E "error:" /tmp/xcodebuild.log | grep -v "actool" | head -20 || true
-            exit 1
-          fi
+                     archive
 
       - name: Export IPA & App Store Sign
         env:
@@ -155,7 +137,7 @@ jobs:
           IPA_FILE=$(ls $RUNNER_TEMP/build/*.ipa 2>/dev/null | head -n 1)
           echo "Uploading $IPA_FILE to App Store Connect via iTMSTransporter..."
 
-          TRANSPORTER_PATH="/Applications/Xcode_16.2.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter"
+          TRANSPORTER_PATH="/Applications/Xcode_16.4.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter"
           if [ ! -f "$TRANSPORTER_PATH" ]; then
             TRANSPORTER_PATH="$(find /Applications/Xcode*.app/Contents/SharedFrameworks/ContentDeliveryServices.framework -name "iTMSTransporter" 2>/dev/null | head -n 1)"
           fi
