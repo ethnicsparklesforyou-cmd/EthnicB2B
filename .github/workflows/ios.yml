@@ -112,6 +112,7 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
+                     ASSETCATALOG_COMPILER_FLAGS="--platform iphoneos --target-device iphone" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 

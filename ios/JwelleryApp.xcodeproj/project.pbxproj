@@ -296,6 +296,7 @@
 			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-JwelleryApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_FLAGS = "--platform iphoneos --target-device iphone";
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS = NO;
 				CLANG_ENABLE_MODULES = YES;
