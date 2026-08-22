@@ -29,11 +29,6 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Prepare Xcode Asset Catalog & Simulator Runtimes
-        run: |
-          sudo mkdir -p /Library/Developer/CoreSimulator/Profiles/Runtimes
-          mkdir -p ~/Library/Developer/CoreSimulator/Profiles/Runtimes
-
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
         with:
@@ -112,9 +107,7 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS=NO \
-                     ASSETCATALOG_COMPILER_OTHER_FLAGS="--ignore-missing-assets" \
+                     ASSETCATALOG_COMPILER_APPICON_NAME="" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		13B07F9E1A680F5B00A7599A /* AppIcon60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 13B07F9D1A680F5B00A7599A /* AppIcon60x60@2x.png */; };
+		13B07F9E1A680F5B00A7599B /* icon-1024.png in Resources */ = {isa = PBXBuildFile; fileRef = 13B07F9D1A680F5B00A7599B /* icon-1024.png */; };
+
 		0C80B921A6F3F58F76C31292 /* libPods-JwelleryApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-JwelleryApp.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1FEAAEF5D61EC0E67D45E7C3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -15,6 +18,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		13B07F9D1A680F5B00A7599A /* AppIcon60x60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIcon60x60@2x.png"; path = "JwelleryApp/AppIcon60x60@2x.png"; sourceTree = "<group>"; };
+		13B07F9D1A680F5B00A7599B /* icon-1024.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "icon-1024.png"; path = "JwelleryApp/icon-1024.png"; sourceTree = "<group>"; };
+
 		13B07F961A680F5B00A75B9A /* JwelleryApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JwelleryApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = JwelleryApp/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = JwelleryApp/Info.plist; sourceTree = "<group>"; };
