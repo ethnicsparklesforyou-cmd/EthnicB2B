@@ -149,18 +149,9 @@ EOF
         run: |
           KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
           IPA_FILE=$(ls $RUNNER_TEMP/build/*.ipa 2>/dev/null | head -n 1)
-          echo "Uploading $IPA_FILE to App Store Connect via Xcode 16 Transporter..."
+          echo "Uploading $IPA_FILE to App Store Connect via Xcode 16 upload-package..."
 
-          # 1. Try xcrun altool --upload-package
           xcrun altool --upload-package "$IPA_FILE" \
             --type ios \
             --apiKey "$KEY_ID" \
-            --apiIssuer "$ISSUER_ID" || \
-          # 2. Fallback to ContentDeliveryServices Transporter CLI
-          if [ -f "/Applications/Xcode_16.2.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter" ]; then
-            /Applications/Xcode_16.2.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/itms/bin/iTMSTransporter \
-              -m upload \
-              -assetPath "$IPA_FILE" \
-              -apiKey "$KEY_ID" \
-              -apiIssuer "$ISSUER_ID"
-          fi
+            --apiIssuer "$ISSUER_ID"
