@@ -12,7 +12,7 @@
 	<string>AppIcon</string>
 	<key>CFBundleIconFiles</key>
 	<array>
-		<string>AppIcon60x60@2x.png</string>
+		<string>icon-60@2x.png</string>
 		<string>icon-1024.png</string>
 	</array>
 	<key>CFBundleExecutable</key>

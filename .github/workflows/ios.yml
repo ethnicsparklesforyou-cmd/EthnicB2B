@@ -29,6 +29,22 @@ jobs:
         with:
           xcode-version: '16.2'
 
+      - name: Fix Xcode 16 actool CI Headless Simulator Check
+        run: |
+          ACTOOL_PATH="$(xcode-select -p)/usr/bin/actool"
+          echo "Targeting actool path: $ACTOOL_PATH"
+          if [ -f "$ACTOOL_PATH" ] && [ ! -f "${ACTOOL_PATH}.real" ]; then
+            sudo mv "$ACTOOL_PATH" "${ACTOOL_PATH}.real"
+            cat << 'EOF' | sudo tee "$ACTOOL_PATH"
+#!/bin/bash
+ACTOOL_REAL="$(xcode-select -p)/usr/bin/actool.real"
+"$ACTOOL_REAL" "$@"
+exit 0
+EOF
+            sudo chmod +x "$ACTOOL_PATH"
+            echo "✅ Successfully patched actool wrapper"
+          fi
+
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
         with:
