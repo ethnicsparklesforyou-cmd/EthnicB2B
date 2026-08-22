@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-upload:
     name: Build & Upload to App Store
-    runs-on: macos-15
+    runs-on: macos-14
 
     steps:
       - name: Checkout code
@@ -27,7 +27,7 @@ jobs:
       - name: Setup Xcode version
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.2'
+          xcode-version: '16.0'
 
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
@@ -104,10 +104,12 @@ jobs:
           xcodebuild -workspace JwelleryApp.xcworkspace \
                      -scheme JwelleryApp \
                      -sdk iphoneos \
+                     -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
                      ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO \
-                     ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR=none \
+                     ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORKS=NO \
+                     COMPILER_INDEX_STORE_ENABLE=NO \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
