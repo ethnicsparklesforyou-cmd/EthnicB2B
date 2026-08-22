@@ -29,6 +29,11 @@ jobs:
         with:
           xcode-version: '16.2'
 
+      - name: Select Active Xcode Developer Directory
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
+
       - name: Setup CocoaPods Cache
         uses: actions/cache@v4
         with:
@@ -107,7 +112,6 @@ jobs:
                      -destination "generic/platform=iOS" \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/JwelleryApp.xcarchive \
-                     OTHER_ACTOOL_FLAGS="--platform iphoneos --target-device iphone" \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
 
