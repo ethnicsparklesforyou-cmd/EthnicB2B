@@ -146,4 +146,13 @@ EOF
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
-          xcrun altool --upload-app -f $RUNNER_TEMP/build/*.ipa -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+          IPA_FILE=$(ls $RUNNER_TEMP/build/*.ipa 2>/dev/null | head -n 1)
+          echo "Uploading $IPA_FILE to App Store Connect..."
+          xcrun altool --upload-app \
+            -f "$IPA_FILE" \
+            -t ios \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID" \
+            --bundle-id "com.ethnicsparkles.business" \
+            --bundle-version "1" \
+            --bundle-short-version-string "1.0"
