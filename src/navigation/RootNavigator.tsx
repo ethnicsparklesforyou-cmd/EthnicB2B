@@ -44,12 +44,15 @@ export function RootNavigator() {
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="Main" component={MainNavigator} />
-        <Stack.Screen
-          name="Auth"
-          component={AuthScreen}
-          options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
-        />
+        {isAuthenticated ? (
+          <Stack.Screen name="Main" component={MainNavigator} />
+        ) : (
+          <Stack.Screen
+            name="Auth"
+            component={AuthScreen}
+            options={{ animation: 'fade' }}
+          />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

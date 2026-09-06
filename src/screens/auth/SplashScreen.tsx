@@ -122,7 +122,7 @@ export function SplashScreen({ onFinish }: Props) {
             },
           ]}
         >
-          <Text style={styles.brandName}>ETHNICS BUSINESS</Text>
+          <Text style={styles.brandName}>ETHNIC BUSINESS</Text>
           <Text style={styles.tagline}>Premium Fashion Jewellery</Text>
         </Animated.View>
       </View>

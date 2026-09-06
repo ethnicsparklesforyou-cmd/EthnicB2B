@@ -118,17 +118,31 @@ export function LoginScreen({ navigation: _navigation }: Props) {
     }
   };
 
+  const isRetailAccount = (userData: any): boolean => {
+    if (!userData) return false;
+    const role = Number(userData.userRole ?? userData.role ?? 0);
+    const roleName = String(userData.roleName ?? userData.role_name ?? userData.type ?? '').toLowerCase();
+    return role === 1 || roleName === 'retail' || (role !== 2 && roleName !== 'b2b' && roleName !== 'business');
+  };
+
   const handleRegister = async (accountType: 'retail' | 'b2b') => {
     const clean = sanitizePhone(phone);
     try {
       const res = await registerWithPhone({ phone: clean, accountType });
       const payload = (res.json as any)?.data;
       if (res.ok && payload?.user && payload?.token) {
+        if (isRetailAccount(payload.user)) {
+          setError('This mobile number is registered as a Retail Customer account. Please use the Ethnics Retail App to sign in, or register with a Business mobile number.');
+          setLoading(false);
+          otpRef.current?.reset();
+          return;
+        }
         await migrateCart(payload.user.id);
         await login(payload.user, payload.token);
         handleDismiss();
       } else {
-        setError((res.json as any).statusMessage || 'Registration failed. Please try again.');
+        const msg = (res.json as any)?.statusMessage || (res.json as any)?.message || 'Registration failed. Please try again.';
+        setError(msg);
         otpRef.current?.reset();
       }
     } catch {
@@ -146,6 +160,12 @@ export function LoginScreen({ navigation: _navigation }: Props) {
       const res = await verifyOtpRequest({ contactType: 'mobile', contactValue: clean, otpCode: otp, isLoginAuth: true });
       const payload = (res.json as any)?.data;
       if (res.ok && payload?.isExist && payload?.user && payload?.token) {
+        if (isRetailAccount(payload.user)) {
+          setError('This mobile number is registered as a Retail Customer account. Please use the Ethnics Retail App to sign in, or register with a Business mobile number.');
+          setLoading(false);
+          otpRef.current?.reset();
+          return;
+        }
         await migrateCart(payload.user.id);
         await login(payload.user, payload.token);
         handleDismiss();
@@ -231,7 +251,7 @@ export function LoginScreen({ navigation: _navigation }: Props) {
           {/* Handle */}
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
-          {/* Step badge + close area */}
+          {/* Step badge */}
           <View style={styles.sheetHeader}>
             <View style={[styles.stepBadge, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
               <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
@@ -239,9 +259,6 @@ export function LoginScreen({ navigation: _navigation }: Props) {
                 {step === 'phone' ? 'STEP 1 OF 2' : 'STEP 2 OF 2'}
               </Text>
             </View>
-            <TouchableOpacity onPress={handleDismiss} style={styles.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <AppIcon name="close" color={colors.textMuted} size={22} />
-            </TouchableOpacity>
           </View>
 
           <View style={[styles.sheetBody, { paddingHorizontal: spacing[5] }]}>
@@ -272,15 +289,6 @@ export function LoginScreen({ navigation: _navigation }: Props) {
                   </View>
                 </View>
                 <Button label="Send OTP" onPress={handlePhoneSubmit} loading={loading} />
-                <TouchableOpacity
-                  onPress={handleDismiss}
-                  activeOpacity={0.7}
-                  style={[styles.skipBtn, { borderColor: colors.border, borderRadius: radius.xl, marginTop: 10 }]}
-                >
-                  <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansMedium, fontSize: fontSize.sm }}>
-                    Explore as Guest
-                  </Text>
-                </TouchableOpacity>
               </>
             )}
 
