@@ -44,7 +44,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
   const { theme, isDark } = useTheme();
   const { colors, fontFamily, fontSize, spacing, radius } = theme;
   const { user, isAuthenticated } = useAuth();
-  const { items: cartItems, addItem } = useCart();
+  const { items: cartItems, addItem, updateQty, removeItem } = useCart();
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
   const { show } = useAppModal();
 
@@ -56,7 +56,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
   const [related, setRelated] = useState<any[]>([]);
   const galleryListRef = useRef<FlatList>(null);
 
-  const cartItem = useMemo(() => cartItems.find(i => i.productId === productId), [cartItems, productId]);
+  const cartItem = useMemo(() => cartItems.find(i => String(i.productId) === String(productId)), [cartItems, productId]);
   const wishlisted = isWishlisted(productId);
 
   useEffect(() => {
@@ -126,11 +126,11 @@ export function ProductDetailScreen({ navigation, route }: Props) {
       return false;
     }
     if (isMaxInCart) {
-      show({ type: 'warning', title: 'Max Stock in Bag', message: `You already have ${currentInCart} ${currentInCart === 1 ? 'item' : 'items'} in your bag, which is the total available in stock (${stockQty}).` });
+      show({ type: 'warning', title: 'Limit Reached', message: 'Maximum available stock is already added in your bag.' });
       return false;
     }
     if (quantity > maxAvailableToAdd) {
-      show({ type: 'warning', title: 'Limited Stock', message: `Only ${stockQty} available in stock. You already have ${currentInCart} in your bag. You can add at most ${maxAvailableToAdd} more.` });
+      show({ type: 'warning', title: 'Limit Reached', message: 'Cannot add more than available stock limit.' });
       return false;
     }
 
@@ -151,11 +151,61 @@ export function ProductDetailScreen({ navigation, route }: Props) {
     return true;
   };
 
+  const handleIncreaseQty = () => {
+    if (currentInCart > 0) {
+      if (currentInCart >= stockQty) {
+        show({ type: 'warning', title: 'Limit Reached', message: 'Maximum available stock reached for this item.' });
+        return;
+      }
+      updateQty(productId, currentInCart + 1);
+    } else {
+      setQuantity(q => Math.min(stockQty, q + 1));
+    }
+  };
+
+  const handleDecreaseQty = () => {
+    if (currentInCart > 0) {
+      if (currentInCart === 1) {
+        removeItem(productId);
+      } else {
+        updateQty(productId, currentInCart - 1);
+      }
+    } else {
+      setQuantity(q => Math.max(1, q - 1));
+    }
+  };
+
+  const handleQtyTextChange = (text: string) => {
+    const val = parseInt(text, 10);
+    if (isNaN(val) || val <= 0) {
+      if (currentInCart > 0) {
+        removeItem(productId);
+      } else {
+        setQuantity(1);
+      }
+      return;
+    }
+    const clamped = Math.min(Math.max(1, stockQty), val);
+    if (currentInCart > 0) {
+      updateQty(productId, clamped);
+    } else {
+      setQuantity(clamped);
+    }
+  };
+
   const handleAddToCart = () => {
     addCurrentProduct();
   };
 
   const handleBuyNow = () => {
+    if (currentInCart > 0) {
+      if (!isAuthenticated) {
+        navigation.getParent()?.navigate('Auth' as never);
+      } else {
+        navigation.navigate('Checkout');
+      }
+      return;
+    }
     const success = addCurrentProduct();
     if (!success) return;
     if (!isAuthenticated) {
@@ -340,7 +390,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
                 <View style={[styles.stockPill, { backgroundColor: '#05966914', borderColor: '#05966935' }]}>
                   <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#059669' }} />
                   <Text style={{ color: '#059669', fontFamily: fontFamily.sansBold, fontSize: 11 }}>
-                    In Stock ({stockQty} available)
+                    In Stock
                   </Text>
                 </View>
               ) : (
@@ -418,40 +468,54 @@ export function ProductDetailScreen({ navigation, route }: Props) {
             </View>
           )}
 
-          {/* ── Quantity Stepper ── */}
-          <View style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surfaceElevated, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: isMaxInCart ? '#EF4444' : colors.border }}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansBold, fontSize: 13 }}>
-                QUANTITY
-              </Text>
-              <Text style={{ color: isMaxInCart ? '#EF4444' : colors.textMuted, fontFamily: fontFamily.sans, fontSize: 11, marginTop: 2 }}>
-                {isMaxInCart ? `Max ${stockQty} already in bag` : `Max ${stockQty} in stock${currentInCart > 0 ? ` (${currentInCart} in bag)` : ''}`}
+          {/* ── Quantity Selector Section ── */}
+          <View style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surfaceElevated, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansBold, fontSize: 13, letterSpacing: 0.5 }}>
+                  {currentInCart > 0 ? 'QUANTITY IN BAG' : 'QUANTITY'}
+                </Text>
+                {currentInCart > 0 && (
+                  <View style={[styles.inCartBadge, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
+                    <AppIcon name="check-circle" size={11} color={colors.primary} />
+                    <Text style={{ color: colors.primary, fontFamily: fontFamily.sansBold, fontSize: 10 }}>
+                      In Bag
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ color: colors.textMuted, fontFamily: fontFamily.sans, fontSize: 11, marginTop: 2 }}>
+                {outOfStock
+                  ? 'Currently out of stock'
+                  : currentInCart > 0
+                    ? 'Update quantity in your bag'
+                    : 'Select required quantity'}
               </Text>
             </View>
 
-            <View style={[styles.qtyControl, { borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.md, opacity: isMaxInCart ? 0.6 : 1 }]}>
+            <View style={[styles.qtyControl, { borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.md, opacity: outOfStock ? 0.6 : 1 }]}>
               <TouchableOpacity
-                onPress={() => setQuantity(q => Math.max(1, q - 1))}
-                disabled={isMaxInCart}
+                onPress={handleDecreaseQty}
+                disabled={outOfStock}
                 style={styles.qtyBtn}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: isMaxInCart ? colors.textMuted : colors.primary, fontSize: 18, fontWeight: '700', lineHeight: 20 }}>−</Text>
+                <Text style={{ color: outOfStock ? colors.textMuted : colors.primary, fontSize: 18, fontWeight: '700', lineHeight: 20 }}>−</Text>
               </TouchableOpacity>
               <TextInput
-                value={String(isMaxInCart ? 0 : quantity)}
-                onChangeText={v => setQuantity(Math.max(1, Math.min(Math.max(1, maxAvailableToAdd), parseInt(v) || 1)))}
-                editable={!isMaxInCart}
+                value={String(currentInCart > 0 ? currentInCart : quantity)}
+                onChangeText={handleQtyTextChange}
+                editable={!outOfStock}
                 keyboardType="number-pad"
                 style={[styles.qtyInput, { color: colors.textPrimary, fontFamily: fontFamily.sansBold, borderColor: colors.border }]}
               />
               <TouchableOpacity
-                onPress={() => setQuantity(q => Math.min(Math.max(1, maxAvailableToAdd), q + 1))}
-                disabled={isMaxInCart || quantity >= maxAvailableToAdd}
+                onPress={handleIncreaseQty}
+                disabled={outOfStock || (currentInCart > 0 ? currentInCart >= stockQty : quantity >= stockQty)}
                 style={styles.qtyBtn}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: (isMaxInCart || quantity >= maxAvailableToAdd) ? colors.textMuted : colors.primary, fontSize: 18, fontWeight: '700', lineHeight: 20 }}>+</Text>
+                <Text style={{ color: (outOfStock || (currentInCart > 0 ? currentInCart >= stockQty : quantity >= stockQty)) ? colors.textMuted : colors.primary, fontSize: 18, fontWeight: '700', lineHeight: 20 }}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -563,30 +627,55 @@ export function ProductDetailScreen({ navigation, route }: Props) {
               TOTAL PRICE
             </Text>
             <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansBold, fontSize: 17 }}>
-              ₹{(price * quantity).toLocaleString('en-IN')}
+              ₹{(price * (currentInCart > 0 ? currentInCart : quantity)).toLocaleString('en-IN')}
             </Text>
+            {currentInCart > 0 && (
+              <Text style={{ color: '#059669', fontFamily: fontFamily.sansMedium, fontSize: 10.5 }}>
+                {currentInCart} in bag
+              </Text>
+            )}
           </View>
 
           <View style={{ flexDirection: 'row', flex: 1, gap: 8 }}>
-            <TouchableOpacity
-              onPress={handleAddToCart}
-              disabled={outOfStock || isMaxInCart || (product.size?.length > 0 && !selectedSize)}
-              activeOpacity={0.85}
-              style={[
-                styles.addToCartBtn,
-                {
-                  backgroundColor: colors.surfaceElevated,
-                  borderColor: (outOfStock || isMaxInCart) ? colors.border : colors.primary,
-                  borderRadius: radius.lg,
-                  opacity: (outOfStock || isMaxInCart) ? 0.6 : 1,
-                }
-              ]}
-            >
-              <AppIcon name="shopping-outline" size={17} color={(outOfStock || isMaxInCart) ? colors.textMuted : colors.primary} />
-              <Text style={{ color: (outOfStock || isMaxInCart) ? colors.textMuted : colors.primary, fontFamily: fontFamily.sansBold, fontSize: 13.5, marginLeft: 4 }}>
-                {outOfStock ? 'Out of Stock' : isMaxInCart ? `Max in Bag (${currentInCart})` : cartItem ? `In Bag (${currentInCart}) +` : 'Add to Bag'}
-              </Text>
-            </TouchableOpacity>
+            {currentInCart > 0 ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Cart')}
+                activeOpacity={0.85}
+                style={[
+                  styles.addToCartBtn,
+                  {
+                    backgroundColor: colors.surfaceElevated,
+                    borderColor: colors.primary,
+                    borderRadius: radius.lg,
+                  }
+                ]}
+              >
+                <AppIcon name="shopping" size={17} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontFamily: fontFamily.sansBold, fontSize: 13.5, marginLeft: 4 }}>
+                  View Bag ({currentInCart})
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleAddToCart}
+                disabled={outOfStock || isMaxInCart || (product.size?.length > 0 && !selectedSize)}
+                activeOpacity={0.85}
+                style={[
+                  styles.addToCartBtn,
+                  {
+                    backgroundColor: colors.surfaceElevated,
+                    borderColor: (outOfStock || isMaxInCart) ? colors.border : colors.primary,
+                    borderRadius: radius.lg,
+                    opacity: (outOfStock || isMaxInCart) ? 0.6 : 1,
+                  }
+                ]}
+              >
+                <AppIcon name="shopping-outline" size={17} color={(outOfStock || isMaxInCart) ? colors.textMuted : colors.primary} />
+                <Text style={{ color: (outOfStock || isMaxInCart) ? colors.textMuted : colors.primary, fontFamily: fontFamily.sansBold, fontSize: 13.5, marginLeft: 4 }}>
+                  {outOfStock ? 'Out of Stock' : isMaxInCart ? 'Max Limit Added' : 'Add to Bag'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               onPress={handleBuyNow}
@@ -607,7 +696,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
               ]}
             >
               <Text style={{ color: '#FFFFFF', fontFamily: fontFamily.sansBold, fontSize: 13.5 }}>
-                Buy Now
+                {currentInCart > 0 ? 'Checkout' : 'Buy Now'}
               </Text>
               <AppIcon name="chevron-right" size={16} color="#FFFFFF" />
             </TouchableOpacity>
@@ -621,6 +710,15 @@ export function ProductDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   heroContainer: { width: W, position: 'relative', overflow: 'hidden' },
+  inCartBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
   floatingNavBtn: {
     width: 40,
     height: 40,
