@@ -3,11 +3,13 @@ import {
   Alert,
   Animated,
   ActivityIndicator,
+  BackHandler,
   Easing,
   Dimensions,
   FlatList,
   Image,
   InteractionManager,
+  Linking,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -37,6 +39,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppIcon, AppGradient, LocationSelectModal } from '../../components/common';
 import { LOCATION_STORAGE_KEY } from '../../components/common/LocationSelectModal';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { TabParamList } from '../../navigation/types';
 
@@ -152,731 +155,201 @@ function PromoMarquee({ fontFamily, isDark }: { fontFamily: any; isDark: boolean
 
 
 
-// ── Memoized Discovery Product Card Component ──
-const DiscoveryCard = React.memo(function DiscoveryCard({
-  item,
-  isDark,
-  fontFamily,
-  colors,
-  cardWidth,
-  cardHeight,
-  onPress,
-}: {
-  item: any;
+// ── B2B Wholesale Partner Announcement Bottom Sheet Banner Modal ──
+function AdModal({ visible, onClose, isDark, colors, fontFamily }: {
+  visible: boolean; onClose: () => void;
+  colors?: any; fontFamily?: any; fontSize?: any; radius?: any;
+  products?: any[]; goProduct?: (id: number) => void;
   isDark: boolean;
-  fontFamily: any;
-  colors: any;
-  cardWidth: number;
-  cardHeight: number;
-  onPress: () => void;
 }) {
-  const uri = getFirstImageUrl(item, 450) || item.imageUrl || null;
-  const rawB2b = item.b2bPrice ? parseFloat(item.b2bPrice) : 0;
-  const rawBase = parseFloat(item.basePrice || item.price || '0');
-  const rawDiscount = parseFloat(item.discountPrice || '0');
+  const insets = useSafeAreaInsets();
+  const screenDims = Dimensions.get('window');
+  const W_MODAL = screenDims.width;
+  const BANNER_SIZE = W_MODAL - 32;
 
-  const finalPrice = rawB2b > 0 ? rawB2b : (rawBase - rawDiscount);
-  const price = rawBase > 0 ? rawBase : finalPrice;
-  const discountPrice = rawDiscount;
-  const discountPercent = (price > finalPrice && price > 0) ? Math.round(((price - finalPrice) / price) * 100) : 0;
-  const categoryName = item.category?.name || item.categoryName || 'Jewellery';
+  const [rendered, setRendered] = useState(visible);
+  const animProgress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      Animated.spring(animProgress, {
+        toValue: 1,
+        damping: 24,
+        mass: 0.8,
+        stiffness: 220,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(animProgress, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        setRendered(false);
+      });
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!rendered) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [rendered, onClose]);
+
+  if (!rendered) return null;
+
+  const backdropOpacity = animProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.65],
+  });
+
+  const sheetTranslateY = animProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [BANNER_SIZE + 160, 0],
+  });
 
   return (
-    <View
-      style={{
-        width: cardWidth,
-        height: cardHeight,
-        borderRadius: 24,
-        overflow: 'hidden',
-        backgroundColor: isDark ? '#1C1929' : '#FFFFFF',
-        borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
-        borderWidth: 1,
-      }}
-    >
-      {/* Luxury Placeholder / Loading Canvas */}
-      <View
+    <View style={[StyleSheet.absoluteFill, { zIndex: 99999, elevation: 25 }]} pointerEvents="box-none">
+      {/* Smooth Dark Backdrop */}
+      <Animated.View
         style={[
           StyleSheet.absoluteFill,
           {
-            backgroundColor: isDark ? '#232034' : '#F7F5FA',
-            alignItems: 'center',
-            justifyContent: 'center',
+            backgroundColor: '#000000',
+            opacity: backdropOpacity,
           },
         ]}
       >
-        <AppIcon name="diamond-stone" size={56} color={isDark ? 'rgba(192, 132, 252, 0.35)' : 'rgba(124, 58, 237, 0.25)'} />
-      </View>
-
-      {/* Product Image */}
-      {uri ? (
-        <Image
-          source={{ uri } as any}
+        <TouchableOpacity
           style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-          fadeDuration={100}
+          activeOpacity={1}
+          onPress={onClose}
         />
-      ) : null}
+      </Animated.View>
 
-      {/* Top Badges */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}
-      >
-        <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-          <Text style={{ color: '#FFFFFF', fontFamily: fontFamily.sansBold, fontSize: 10.5, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-            {categoryName}
-          </Text>
-        </View>
-
-        {discountPercent > 0 && (
-          <View style={{ backgroundColor: '#E11D48', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 14 }}>
-            <Text style={{ color: '#FFFFFF', fontFamily: fontFamily.sansBold, fontSize: 10, letterSpacing: 0.5 }}>
-              {discountPercent}% OFF
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Bottom Info Bar */}
-      <TouchableOpacity
-        activeOpacity={0.92}
-        onPress={onPress}
+      {/* Smooth Bottom Sheet Container */}
+      <Animated.View
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: isDark ? 'rgba(18, 16, 26, 0.94)' : 'rgba(20, 18, 28, 0.86)',
-          paddingHorizontal: 18,
-          paddingTop: 14,
-          paddingBottom: 16,
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-          borderTopWidth: 1,
-          borderColor: 'rgba(255,255,255,0.12)',
+          backgroundColor: isDark ? '#14111E' : '#FFFFFF',
+          borderTopLeftRadius: 30,
+          borderTopRightRadius: 30,
+          paddingBottom: Math.max(insets.bottom, 20),
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.35,
+          shadowRadius: 18,
+          elevation: 24,
+          borderTopWidth: 1.5,
+          borderLeftWidth: 1,
+          borderRightWidth: 1,
+          borderColor: isDark ? 'rgba(217, 119, 6, 0.4)' : 'rgba(217, 119, 6, 0.25)',
+          transform: [{ translateY: sheetTranslateY }],
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontFamily: fontFamily.sansBold, fontSize: 18 }} numberOfLines={1}>
-          {item.name || 'Ethnic Jewellery Piece'}
-        </Text>
-
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 5 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <Text style={{ color: colors.gold || '#FBBF24', fontFamily: fontFamily.sansBold, fontSize: 18 }}>
-              ₹{finalPrice.toLocaleString('en-IN')}
-            </Text>
-            {discountPrice > 0 && (
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: fontFamily.sans, fontSize: 12, textDecorationLine: 'line-through' }}>
-                ₹{price.toLocaleString('en-IN')}
-              </Text>
-            )}
-          </View>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.sansMedium, fontSize: 11.5 }}>
-            Tap to inspect →
-          </Text>
+        {/* Top Drag Pill */}
+        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 6 }}>
+          <View
+            style={{
+              width: 44,
+              height: 4.5,
+              borderRadius: 3,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.18)',
+            }}
+          />
         </View>
-      </TouchableOpacity>
-    </View>
-  );
-});
 
-// ── Ad Modal (Clean & Seamless Style Match Discovery) ──
-function AdModal({ visible, onClose, colors, fontFamily, fontSize, radius, products, goProduct, isDark }: {
-  visible: boolean; onClose: () => void;
-  colors: any; fontFamily: any; fontSize: any; radius: any;
-  products: any[]; goProduct: (id: number) => void;
-  isDark: boolean;
-}) {
-  const { toggle } = useWishlist();
-  const { user } = useAuth();
-  const screenDims = Dimensions.get('window');
-  const W_MODAL = screenDims.width;
-  const H_MODAL = screenDims.height;
-  const CARD_W = Math.min(W_MODAL * 0.90, 400);
-  const CARD_H = Math.min(H_MODAL * 0.58, 510);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [deckProducts, setDeckProducts] = useState<any[]>([]);
-  const [exitingCard, setExitingCard] = useState<{
-    item: any;
-    direction: 'left' | 'right';
-    anim: Animated.ValueXY;
-  } | null>(null);
-
-  const pageRef = useRef(1);
-  const hasMoreRef = useRef(true);
-  const isFetchingRef = useRef(false);
-  const seenIdsRef = useRef(new Set<string>());
-  const isSwipingRef = useRef(false);
-
-  // Dedicated button press scales
-  const dislikeBtnScale = useRef(new Animated.Value(1)).current;
-  const likeBtnScale = useRef(new Animated.Value(1)).current;
-
-  // Active top card interactive pan & transition drivers
-  const topCardAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const exitAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-
-  const animateBtnPress = (animValue: Animated.Value) => {
-    Animated.sequence([
-      Animated.timing(animValue, { toValue: 0.85, duration: 80, useNativeDriver: true }),
-      Animated.spring(animValue, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const extractProducts = (res: any): any[] => {
-    if (!res) return [];
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res.data)) return res.data;
-    if (Array.isArray(res.products)) return res.products;
-    if (Array.isArray(res?.data?.products)) return res.data.products;
-    if (Array.isArray(res?.data?.data?.products)) return res.data.data.products;
-    if (Array.isArray(res?.result?.products)) return res.result.products;
-    if (Array.isArray(res?.data?.items)) return res.data.items;
-    if (Array.isArray(res?.result)) return res.result;
-    return [];
-  };
-
-  const fetchMoreDeckProducts = async (pageNum?: number) => {
-    if (isFetchingRef.current || !hasMoreRef.current) return;
-    isFetchingRef.current = true;
-    const pageToFetch = pageNum ?? (pageRef.current + 1);
-    try {
-      const res = await fetchProducts({ page: pageToFetch, limit: 20, sortBy: 'createAt', sortOrder: 'DESC' });
-      const raw = extractProducts(res);
-      const pagination = res?.data?.pagination || res?.pagination || {};
-
-      if (raw.length > 0) {
-        const inStock = raw.filter((p: any) => p && p.id && (p.stockQuantity === undefined || p.stockQuantity === null || Number(p.stockQuantity) > 0));
-        const newUniques: any[] = [];
-        inStock.forEach((p: any) => {
-          const key = String(p.id);
-          if (!seenIdsRef.current.has(key)) {
-            seenIdsRef.current.add(key);
-            newUniques.push(p);
-          }
-        });
-
-        if (newUniques.length > 0) {
-          setDeckProducts(prev => [...prev, ...newUniques]);
-          prefetchProductImages(newUniques, 4, 450);
-        }
-        pageRef.current = pageToFetch;
-        hasMoreRef.current = pagination.hasNextPage ?? (raw.length >= 20);
-      } else {
-        hasMoreRef.current = false;
-      }
-    } catch {
-      // Ignore network error silently
-    } finally {
-      isFetchingRef.current = false;
-    }
-  };
-
-  useEffect(() => {
-    if (visible) {
-      setCurrentIndex(0);
-      setExitingCard(null);
-      pageRef.current = 1;
-      hasMoreRef.current = true;
-      isFetchingRef.current = false;
-      seenIdsRef.current.clear();
-      topCardAnim.setValue({ x: 0, y: 0 });
-      exitAnim.setValue({ x: 0, y: 0 });
-
-      if (products && products.length > 0) {
-        const inStock = products.filter((p: any) => p && p.id && (p.stockQuantity === undefined || p.stockQuantity === null || Number(p.stockQuantity) > 0));
-        const initialUniques: any[] = [];
-        inStock.slice(0, 20).forEach((p: any) => {
-          const key = String(p.id);
-          if (!seenIdsRef.current.has(key)) {
-            seenIdsRef.current.add(key);
-            initialUniques.push(p);
-          }
-        });
-        if (initialUniques.length > 0) {
-          setDeckProducts(initialUniques);
-          prefetchProductImages(initialUniques, 4, 450);
-        }
-      } else {
-        fetchMoreDeckProducts(1);
-      }
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (products && products.length > 0 && deckProducts.length === 0) {
-      const inStock = products.filter((p: any) => p && p.id && (p.stockQuantity === undefined || p.stockQuantity === null || Number(p.stockQuantity) > 0));
-      const initialUniques: any[] = [];
-      inStock.slice(0, 20).forEach((p: any) => {
-        const key = String(p.id);
-        if (!seenIdsRef.current.has(key)) {
-          seenIdsRef.current.add(key);
-          initialUniques.push(p);
-        }
-      });
-      if (initialUniques.length > 0) {
-        setDeckProducts(initialUniques);
-        prefetchProductImages(initialUniques, 4, 450);
-      }
-    }
-  }, [products]);
-
-  // Image pre-fetching for instant, zero-delay card reveals
-  useEffect(() => {
-    if (deckProducts.length > currentIndex) {
-      const upcoming = deckProducts.slice(currentIndex, currentIndex + 3);
-      prefetchProductImages(upcoming, 3, 450);
-    }
-  }, [currentIndex, deckProducts]);
-
-  const checkPagination = useCallback((nextIdx: number) => {
-    if (nextIdx >= deckProducts.length - 4) {
-      fetchMoreDeckProducts();
-    }
-  }, [deckProducts.length]);
-
-
-  const deckStateRef = useRef({ currentIndex, deckProducts, toggle, checkPagination, onClose, goProduct });
-  useEffect(() => {
-    deckStateRef.current = { currentIndex, deckProducts, toggle, checkPagination, onClose, goProduct };
-  }, [currentIndex, deckProducts, toggle, checkPagination, onClose, goProduct]);
-
-  // Butter-Smooth Native Swipe (Zero snap-back, independent exiting animation)
-  const performSwipe = useCallback((direction: 'left' | 'right', startX: number = 0, startY: number = 0) => {
-    if (isSwipingRef.current) return;
-    const { currentIndex: cIdx, deckProducts: dProds } = deckStateRef.current;
-    if (cIdx >= dProds.length) return;
-    isSwipingRef.current = true;
-
-    if (direction === 'left') {
-      animateBtnPress(dislikeBtnScale);
-    } else {
-      animateBtnPress(likeBtnScale);
-    }
-
-    const currentItem = dProds[cIdx];
-    if (currentItem?.id) {
-      if (direction === 'right') {
-        deckStateRef.current.toggle(currentItem.id).catch(() => { });
-        trackAdModalSwipe({ productId: currentItem.id, action: 'like', source: 'b2b_app', userId: user?.id }).catch(() => { });
-      } else {
-        trackAdModalSwipe({ productId: currentItem.id, action: 'unlike', source: 'b2b_app', userId: user?.id }).catch(() => { });
-      }
-    }
-
-    const toX = direction === 'right' ? W_MODAL * 1.5 : -W_MODAL * 1.5;
-    const toY = startY + (direction === 'right' ? 12 : -12);
-
-    // Position exiting card exactly at current coordinate & trigger state change
-    exitAnim.setValue({ x: startX, y: startY });
-    setExitingCard({ item: currentItem, direction, anim: exitAnim });
-
-    // Reset top card animation and increment deck index
-    topCardAnim.setValue({ x: 0, y: 0 });
-    const nextIdx = cIdx + 1;
-    setCurrentIndex(nextIdx);
-    deckStateRef.current.checkPagination(nextIdx);
-
-    // Animate exiting card smoothly off-screen with native thread
-    Animated.timing(exitAnim, {
-      toValue: { x: toX, y: toY },
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      setExitingCard(null);
-      isSwipingRef.current = false;
-    });
-  }, [W_MODAL, dislikeBtnScale, likeBtnScale, topCardAnim, exitAnim]);
-
-  const triggerSwipe = useCallback((direction: 'left' | 'right') => {
-    performSwipe(direction, 0, 0);
-  }, [performSwipe]);
-
-  const panResponder = useMemo(() =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6;
-      },
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6;
-      },
-      onPanResponderGrant: () => {
-        if (isSwipingRef.current) return;
-        topCardAnim.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (isSwipingRef.current) return;
-        topCardAnim.setValue({ x: gestureState.dx, y: gestureState.dy });
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (isSwipingRef.current) return;
-        const isRightSwipe = gestureState.dx > 80 || gestureState.vx > 0.4;
-        const isLeftSwipe = gestureState.dx < -80 || gestureState.vx < -0.4;
-
-        if (isRightSwipe) {
-          performSwipe('right', gestureState.dx, gestureState.dy);
-        } else if (isLeftSwipe) {
-          performSwipe('left', gestureState.dx, gestureState.dy);
-        } else {
-          Animated.spring(topCardAnim, {
-            toValue: { x: 0, y: 0 },
-            friction: 7,
-            tension: 90,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-      onPanResponderTerminate: () => {
-        if (!isSwipingRef.current) {
-          Animated.spring(topCardAnim, {
-            toValue: { x: 0, y: 0 },
-            friction: 7,
-            tension: 90,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    }),
-    [performSwipe, topCardAnim]
-  );
-
-  const nextCardScale = topCardAnim.x.interpolate({
-    inputRange: [-W_MODAL * 0.75, 0, W_MODAL * 0.75],
-    outputRange: [1, 0.94, 1],
-    extrapolate: 'clamp',
-  });
-
-  const nextCardTranslateY = topCardAnim.x.interpolate({
-    inputRange: [-W_MODAL * 0.75, 0, W_MODAL * 0.75],
-    outputRange: [0, 14, 0],
-    extrapolate: 'clamp',
-  });
-
-  const nextCardOpacity = topCardAnim.x.interpolate({
-    inputRange: [-W_MODAL * 0.75, 0, W_MODAL * 0.75],
-    outputRange: [1, 0.92, 1],
-    extrapolate: 'clamp',
-  });
-
-  const topCardOpacity = topCardAnim.x.interpolate({
-    inputRange: [-W_MODAL * 1.2, -W_MODAL * 0.35, 0, W_MODAL * 0.35, W_MODAL * 1.2],
-    outputRange: [0, 1, 1, 1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const topCardRotate = topCardAnim.x.interpolate({
-    inputRange: [-W_MODAL, 0, W_MODAL],
-    outputRange: ['-14deg', '0deg', '14deg'],
-    extrapolate: 'clamp',
-  });
-
-  const likeBadgeOpacity = topCardAnim.x.interpolate({
-    inputRange: [0, 30, 90],
-    outputRange: [0, 0.4, 1],
-    extrapolate: 'clamp',
-  });
-
-  const dislikeBadgeOpacity = topCardAnim.x.interpolate({
-    inputRange: [-90, -30, 0],
-    outputRange: [1, 0.4, 0],
-    extrapolate: 'clamp',
-  });
-
-  const nextCardItem = deckProducts[currentIndex + 1];
-  const topCardItem = deckProducts[currentIndex];
-
-  return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={StyleSheet.absoluteFill}>
-        {/* Dark Backdrop */}
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={onClose}
-        >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.65)' }]} />
-        </TouchableOpacity>
-
-        {/* Bottom Sheet Container */}
+        {/* Modal Header */}
         <View
           style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: colors.background,
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            height: Math.min(H_MODAL * 0.86, 730),
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -6 },
-            shadowOpacity: 0.25,
-            shadowRadius: 18,
-            elevation: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 18,
+            paddingTop: 4,
+            paddingBottom: 12,
           }}
         >
-          {/* Top Drag Indicator */}
-          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)' }} />
-          </View>
-
-          {/* Modal Header */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: isDark ? 'rgba(124, 58, 237, 0.18)' : '#F5EEFF', borderColor: isDark ? 'rgba(192, 132, 252, 0.35)' : 'rgba(124, 58, 237, 0.20)', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16 }}>
-              <AppIcon name="star-four-points" size={11} color={isDark ? '#C084FC' : '#7C3AED'} />
-              <Text style={{ color: isDark ? '#C084FC' : '#7C3AED', fontFamily: fontFamily.sansBold, fontSize: 10, letterSpacing: 1.5 }}>
-                STYLE MATCH
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={onClose}
-              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#262335' : '#F0EEF5', alignItems: 'center', justifyContent: 'center' }}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: 'rgba(217, 119, 6, 0.14)',
+              borderWidth: 1,
+              borderColor: 'rgba(217, 119, 6, 0.35)',
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 16,
+            }}
+          >
+            <AppIcon name="handshake" size={13} color="#D97706" />
+            <Text
+              style={{
+                color: '#D97706',
+                fontFamily: fontFamily?.sansBold,
+                fontSize: 11,
+                fontWeight: '700',
+                letterSpacing: 0.8,
+              }}
             >
-              <AppIcon name="close" size={17} color={colors.textPrimary} />
-            </TouchableOpacity>
+              B2B PARTNERSHIP OFFER
+            </Text>
           </View>
 
-          {/* Card Deck Area */}
-          <View style={{ flex: 1, marginTop: 16, alignItems: 'center', justifyContent: 'center' }}>
-            {deckProducts.length === 0 ? (
-              <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={{ color: colors.textMuted, fontFamily: fontFamily.sansMedium, fontSize: 13, marginTop: 14 }}>
-                  Curating styles for you...
-                </Text>
-              </View>
-            ) : currentIndex < deckProducts.length ? (
-              <View style={{ width: CARD_W, height: CARD_H }}>
-                {/* ── Background Card (Smoothly scales & slides up) ── */}
-                {nextCardItem && (
-                  <Animated.View
-                    key={`bg-${nextCardItem.id}`}
-                    style={{
-                      position: 'absolute',
-                      width: CARD_W,
-                      height: CARD_H,
-                      alignSelf: 'center',
-                      top: 0,
-                      zIndex: 1,
-                      transform: [
-                        { scale: nextCardScale },
-                        { translateY: nextCardTranslateY },
-                      ],
-                      opacity: nextCardOpacity,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 8,
-                      elevation: 3,
-                    }}
-                  >
-                    <DiscoveryCard
-                      item={nextCardItem}
-                      isDark={isDark}
-                      fontFamily={fontFamily}
-                      colors={colors}
-                      cardWidth={CARD_W}
-                      cardHeight={CARD_H}
-                      onPress={() => {
-                        if (nextCardItem.id) {
-                          onClose();
-                          goProduct(nextCardItem.id);
-                        }
-                      }}
-                    />
-                  </Animated.View>
-                )}
-
-                {/* ── Active Top Card (Draggable & Sliders) ── */}
-                {topCardItem && (
-                  <Animated.View
-                    key={`top-${topCardItem.id}`}
-                    style={{
-                      position: 'absolute',
-                      width: CARD_W,
-                      height: CARD_H,
-                      alignSelf: 'center',
-                      top: 0,
-                      zIndex: 2,
-                      opacity: topCardOpacity,
-                      transform: [
-                        { translateX: topCardAnim.x },
-                        { translateY: topCardAnim.y },
-                        {
-                          rotate: topCardAnim.x.interpolate({
-                            inputRange: [-W_MODAL, 0, W_MODAL],
-                            outputRange: ['-14deg', '0deg', '14deg'],
-                            extrapolate: 'clamp',
-                          }),
-                        },
-                      ],
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 10 },
-                      shadowOpacity: 0.22,
-                      shadowRadius: 16,
-                      elevation: 8,
-                    }}
-                    {...panResponder.panHandlers}
-                  >
-                    <DiscoveryCard
-                      item={topCardItem}
-                      isDark={isDark}
-                      fontFamily={fontFamily}
-                      colors={colors}
-                      cardWidth={CARD_W}
-                      cardHeight={CARD_H}
-                      onPress={() => {
-                        if (topCardItem.id) {
-                          onClose();
-                          goProduct(topCardItem.id);
-                        }
-                      }}
-                    />
-                  </Animated.View>
-                )}
-
-                {/* ── Exiting Card (Flying smoothly off-screen with zero snap-back) ── */}
-                {exitingCard && (
-                  <Animated.View
-                    key={`exit-${exitingCard.item.id}`}
-                    style={{
-                      position: 'absolute',
-                      width: CARD_W,
-                      height: CARD_H,
-                      alignSelf: 'center',
-                      top: 0,
-                      zIndex: 10,
-                      opacity: exitAnim.x.interpolate({
-                        inputRange: [-W_MODAL * 1.3, -W_MODAL * 0.9, 0, W_MODAL * 0.9, W_MODAL * 1.3],
-                        outputRange: [0, 0.9, 1, 0.9, 0],
-                        extrapolate: 'clamp',
-                      }),
-                      transform: [
-                        { translateX: exitAnim.x },
-                        { translateY: exitAnim.y },
-                        {
-                          rotate: exitAnim.x.interpolate({
-                            inputRange: [-W_MODAL, 0, W_MODAL],
-                            outputRange: ['-14deg', '0deg', '14deg'],
-                            extrapolate: 'clamp',
-                          }),
-                        },
-                      ],
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 10 },
-                      shadowOpacity: 0.22,
-                      shadowRadius: 16,
-                      elevation: 10,
-                    }}
-                    pointerEvents="none"
-                  >
-                    <DiscoveryCard
-                      item={exitingCard.item}
-                      isDark={isDark}
-                      fontFamily={fontFamily}
-                      colors={colors}
-                      cardWidth={CARD_W}
-                      cardHeight={CARD_H}
-                      onPress={() => { }}
-                    />
-                  </Animated.View>
-                )}
-              </View>
-            ) : (
-              <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingVertical: 40 }}>
-                <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <AppIcon name="check-all" size={36} color={colors.primary} />
-                </View>
-                <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansBold, fontSize: 18, textAlign: 'center' }}>
-                  You're All Caught Up!
-                </Text>
-                <Text style={{ textAlign: 'center', color: colors.textMuted, fontFamily: fontFamily.sans, fontSize: 13, marginTop: 6, lineHeight: 18 }}>
-                  You've curated all the latest styles. Tap below to restart discovery.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setCurrentIndex(0);
-                    fetchMoreDeckProducts(1);
-                  }}
-                  style={{ marginTop: 20, backgroundColor: colors.primary, paddingHorizontal: 22, paddingVertical: 11, borderRadius: 22 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontFamily: fontFamily.sansBold, fontSize: 13 }}>Restart Discovery</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Clean, Professional Action Bar */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 48, paddingBottom: 32, paddingTop: 14 }}>
-            {/* Pass / Dislike Button */}
-            <Animated.View style={{ transform: [{ scale: dislikeBtnScale }] }}>
-              <TouchableOpacity
-                onPress={() => triggerSwipe('left')}
-                activeOpacity={0.78}
-                style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 29,
-                  backgroundColor: isDark ? '#1C162B' : '#FFFFFF',
-                  borderWidth: 1.5,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: isDark ? 0.35 : 0.08,
-                  shadowRadius: 10,
-                  elevation: 5,
-                }}
-              >
-                <AppIcon name="close" size={24} color={isDark ? '#A78BFA' : '#64748B'} />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Like / Wishlist Button */}
-            <Animated.View style={{ transform: [{ scale: likeBtnScale }] }}>
-              <TouchableOpacity
-                onPress={() => triggerSwipe('right')}
-                activeOpacity={0.78}
-                style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 29,
-                  backgroundColor: isDark ? '#2D1124' : '#FFF0F6',
-                  borderWidth: 1.5,
-                  borderColor: isDark ? 'rgba(236, 72, 153, 0.40)' : 'rgba(236, 72, 153, 0.25)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#EC4899',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: isDark ? 0.45 : 0.20,
-                  shadowRadius: 12,
-                  elevation: 5,
-                }}
-              >
-                <AppIcon name="cards-heart" size={26} color="#EC4899" />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon name="close" size={17} color={colors?.textPrimary || (isDark ? '#FFF' : '#1A1A1A')} />
+          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+
+        {/* High Definition Crisp Banner Image Card */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <TouchableOpacity
+            activeOpacity={0.96}
+            onPress={onClose}
+            style={{
+              width: '100%',
+              height: BANNER_SIZE,
+              borderRadius: 20,
+              overflow: 'hidden',
+              backgroundColor: '#071811',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 6,
+            }}
+          >
+            <Image
+              source={require('../../assets/partner_banner.jpg')}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -2606,7 +2079,7 @@ export function HomeScreen({ navigation }: Props) {
         }
       ></Animated.FlatList>
 
-      {/* ── Style Discovery Swipe FAB ── */}
+      {/* ── B2B Partner Offer FAB ── */}
       <View style={{ position: 'absolute', bottom: 78, right: 16, zIndex: 9999, elevation: 12 }}>
         <TouchableOpacity
           activeOpacity={0.88}
@@ -2628,7 +2101,7 @@ export function HomeScreen({ navigation }: Props) {
               borderColor: 'rgba(255,255,255,0.4)',
             }}
           >
-            <AppIcon name="heart" size={24} color="#FFF" />
+            <AppIcon name="handshake-outline" size={24} color="#FFF" />
           </AppGradient>
         </TouchableOpacity>
       </View>
