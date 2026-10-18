@@ -72,7 +72,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const saveAndSetItems = useCallback((updater: (prev: CartItem[]) => CartItem[]) => {
     setItems(prev => {
       const next = updater(prev);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => { });
       return next;
     });
   }, []);
@@ -112,7 +112,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(parsed) && !isCartClearedRef.current) {
             setItems(parsed);
           }
-        } catch {}
+        } catch { }
       }
     });
   }, []);
@@ -124,22 +124,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (syncedUserRef.current === user.id) return;
+      syncedUserRef.current = user.id;
 
-      // Migrate any guest cart items to server first
-      if (items.length > 0) {
-        await Promise.allSettled(
-          items.map(item =>
-            addToServerCart({
-              userId: user.id,
-              productId: Number(item.productId),
-              quantity: item.quantity,
-              size: item.size || null,
-            }),
-          ),
-        );
-      }
-
-      // Then fetch the merged server cart
+      // In B2B app, server cart is the single source of truth for logged-in users.
+      // Fetch the server cart directly to hydrate.
       const serverCart = await fetchServerCart(user.id);
       const serverItems = serverCart?.data?.items || [];
       if (Array.isArray(serverItems) && serverItems.length && !isCartClearedRef.current) {
@@ -175,7 +163,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       syncedUserRef.current = user.id;
     };
 
-    sync().catch(() => {});
+    sync().catch(() => { });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id, hydrateFromServerCart]);
 
@@ -218,7 +206,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               prev.map(i => (isSameProduct(i.productId, item.productId) ? { ...i, cartItemId: newItemId } : i)),
             );
           }
-        } catch {}
+        } catch { }
       });
     }
   }, [saveAndSetItems, scheduleSync, isAuthenticated, user]);
@@ -250,7 +238,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             cartItemId: targetItem.cartItemId,
             quantity,
             userId: user.id,
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
           const res = await addToServerCart({
             userId: user.id,
@@ -278,7 +266,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const target = prev.find(i => isSameProduct(i.productId, productId));
       if (target) targetCartItemId = target.cartItemId;
       const next = prev.filter(i => !isSameProduct(i.productId, productId));
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => { });
       return next;
     });
 
@@ -294,14 +282,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removedProductIdsRef.current.clear();
 
     setItems([]);
-    await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    await AsyncStorage.removeItem(STORAGE_KEY).catch(() => { });
 
     if (isAuthenticated && user) {
       scheduleSync(async () => {
         const latest = await fetchServerCart(user.id).catch(() => null);
         const cartId = latest?.data?.cart?.id || latest?.data?.cartId || latest?.data?.cart?.cartId || latest?.data?.id || null;
         if (cartId) {
-          await clearServerCart(cartId).catch(() => {});
+          await clearServerCart(cartId).catch(() => { });
         }
       });
     }

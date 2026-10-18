@@ -100,7 +100,7 @@ export function LoginScreen({ navigation: _navigation }: Props) {
         contactValue: clean,
         countryCode: selectedCountry.dial_code,
         isLoginAuth: true,
-      }).catch(() => {});
+      }).catch(() => { });
       setStep('otp');
       startTimer();
       setTimeout(() => {

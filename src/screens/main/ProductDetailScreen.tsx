@@ -149,9 +149,6 @@ export function ProductDetailScreen({ navigation, route }: Props) {
       size: selectedSize || null,
       stockQuantity: stockQty,
     });
-    if (isAuthenticated && user) {
-      addToServerCart({ userId: user.id, productId: product.id, quantity, size: selectedSize || null }).catch(() => { });
-    }
     return true;
   };
 
