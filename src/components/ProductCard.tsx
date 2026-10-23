@@ -117,8 +117,18 @@ function ProductCardComponent({ product, onPress }: Props) {
 
       {/* Hero Edge-to-Edge Image Container (Clean & Unobstructed) */}
       <View style={[styles.imgWrap, { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }]}>
+        {/* Placeholder underneath while loading */}
+        <View style={[StyleSheet.absoluteFill, styles.img, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', alignItems: 'center', justifyContent: 'center' }]}>
+          <AppIcon name="diamond-stone" size={26} color={isDark ? '#3F3F46' : '#D4D4D8'} />
+        </View>
+
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.img} resizeMode="cover" />
+          <Image
+            source={{ uri: imageUrl, cache: 'force-cache' }}
+            style={styles.img}
+            resizeMode="cover"
+            fadeDuration={0}
+          />
         ) : (
           <View style={[styles.img, { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
             <AppIcon name="diamond-stone" size={32} color={colors.primary} />
