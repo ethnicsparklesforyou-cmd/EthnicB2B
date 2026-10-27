@@ -17,6 +17,8 @@ const PRODUCT_BADGES = [
   { label: 'TRENDING', bg: '#7C3AED' },
 ];
 
+const MEMORY_LOADED_IMAGES = new Set<string>();
+
 function ProductCardComponent({ product, onPress }: Props) {
   const { theme, isDark } = useTheme();
   const { colors, fontFamily, fontSize, radius } = theme;
@@ -30,8 +32,8 @@ function ProductCardComponent({ product, onPress }: Props) {
 
   const finalPrice = rawB2b > 0 ? rawB2b : (rawBase - rawDiscount);
   const basePrice = rawBase > 0 ? rawBase : finalPrice;
-  const hasDiscount = basePrice > finalPrice;
-  const discountPct = hasDiscount ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0;
+  const hasDiscount = false; // Business app shows direct wholesale price only
+  const discountPct = 0;
   const imageUrl = getFirstImageUrl(product);
   const cartItem = items.find(i => String(i.productId) === String(product.id));
   const qtyInCart = cartItem ? cartItem.quantity : 0;
@@ -39,6 +41,34 @@ function ProductCardComponent({ product, onPress }: Props) {
   const outOfStock = (product.stockQuantity ?? 1) === 0;
   const rating = parseFloat(product.avgRating || '0');
   const reviewCount = product.reviewCount || 0;
+
+  // Instant image cache state & progressive shimmer
+  const isInitiallyLoaded = Boolean(imageUrl && MEMORY_LOADED_IMAGES.has(imageUrl));
+  const [imageLoaded, setImageLoaded] = useState(isInitiallyLoaded);
+  const fadeImgAnim = useRef(new Animated.Value(isInitiallyLoaded ? 1 : 0)).current;
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    if (imageLoaded) return;
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.85, duration: 750, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.35, duration: 750, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [imageLoaded, pulseAnim]);
+
+  const handleImageLoad = () => {
+    if (imageUrl) MEMORY_LOADED_IMAGES.add(imageUrl);
+    setImageLoaded(true);
+    Animated.timing(fadeImgAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  };
 
   // Dynamic Tag vs Rotating Badge
   const rawTag = product.productTag !== undefined && product.productTag !== null ? String(product.productTag).trim() : null;
@@ -116,18 +146,30 @@ function ProductCardComponent({ product, onPress }: Props) {
       ]}>
 
       {/* Hero Edge-to-Edge Image Container (Clean & Unobstructed) */}
-      <View style={[styles.imgWrap, { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }]}>
-        {/* Placeholder underneath while loading */}
-        <View style={[StyleSheet.absoluteFill, styles.img, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', alignItems: 'center', justifyContent: 'center' }]}>
-          <AppIcon name="diamond-stone" size={26} color={isDark ? '#3F3F46' : '#D4D4D8'} />
-        </View>
+      <View style={[styles.imgWrap, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }]}>
+        {/* Shimmer / Skeleton Placeholder (Active while image is fetching/decoding) */}
+        {!imageLoaded && (
+          <View style={[StyleSheet.absoluteFill, styles.img, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', alignItems: 'center', justifyContent: 'center' }]}>
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: isDark ? '#27272A' : '#E4E4E7',
+                  opacity: pulseAnim,
+                }
+              ]}
+            />
+            <AppIcon name="diamond-stone" size={24} color={isDark ? '#3F3F46' : '#D4D4D8'} />
+          </View>
+        )}
 
         {imageUrl ? (
-          <Image
+          <Animated.Image
             source={{ uri: imageUrl, cache: 'force-cache' }}
-            style={styles.img}
+            style={[styles.img, { opacity: fadeImgAnim }]}
             resizeMode="cover"
-            fadeDuration={0}
+            onLoad={handleImageLoad}
+            fadeDuration={180}
           />
         ) : (
           <View style={[styles.img, { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
@@ -192,7 +234,7 @@ function ProductCardComponent({ product, onPress }: Props) {
         {/* Price Row & Add to Cart / Qty Control */}
         <View style={styles.bottomRow}>
           <View style={{ flex: 1, paddingRight: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5 }}>
               <Text
                 style={{
                   color: colors.textPrimary,
@@ -203,35 +245,16 @@ function ProductCardComponent({ product, onPress }: Props) {
                 numberOfLines={1}>
                 ₹{finalPrice.toLocaleString('en-IN')}
               </Text>
-              {hasDiscount && (
-                <Text
-                  style={{
-                    color: colors.textMuted,
-                    fontFamily: fontFamily.sans,
-                    fontSize: 10,
-                    textDecorationLine: 'line-through',
-                  }}
-                  numberOfLines={1}>
-                  ₹{basePrice.toLocaleString('en-IN')}
-                </Text>
-              )}
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
-              {hasDiscount && (
-                <Text style={{ color: '#059669', fontFamily: fontFamily.sansBold, fontSize: 10, fontWeight: '700' }}>
-                  {discountPct}% OFF
+            {rating > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 1 }}>
+                <AppIcon name="star" size={10} color="#F59E0B" />
+                <Text style={{ color: colors.textMuted, fontSize: 10, fontFamily: fontFamily.sansBold }}>
+                  {rating.toFixed(1)}
                 </Text>
-              )}
-              {rating > 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                  <AppIcon name="star" size={10} color="#F59E0B" />
-                  <Text style={{ color: colors.textMuted, fontSize: 10, fontFamily: fontFamily.sansBold }}>
-                    {rating.toFixed(1)}
-                  </Text>
-                </View>
-              )}
-            </View>
+              </View>
+            )}
           </View>
 
           {/* Quick Add or Qty Counter */}

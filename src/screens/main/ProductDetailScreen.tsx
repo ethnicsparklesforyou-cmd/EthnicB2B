@@ -96,10 +96,10 @@ export function ProductDetailScreen({ navigation, route }: Props) {
 
   const price = rawB2b > 0 ? rawB2b : (rawBase - rawDiscount);
   const originalPrice = rawBase > 0 ? rawBase : price;
-  const hasDiscount = originalPrice > price;
-  const discountPct = hasDiscount ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const hasDiscount = false;
+  const discountPct = 0;
   const isB2bSpecial = rawB2b > 0;
-  const savings = originalPrice - price;
+  const savings = 0;
   const stockQty = typeof product?.stockQuantity === 'number'
     ? product.stockQuantity
     : (parseInt(String(product?.stockQuantity || '0'), 10) || 0);
@@ -421,18 +421,6 @@ export function ProductDetailScreen({ navigation, route }: Props) {
               <Text style={{ color: colors.textPrimary, fontFamily: fontFamily.sansBold, fontSize: 30, letterSpacing: -0.5 }}>
                 ₹{price.toLocaleString('en-IN')}
               </Text>
-              {hasDiscount && (
-                <>
-                  <Text style={{ color: colors.textMuted, fontFamily: fontFamily.sans, fontSize: 15, textDecorationLine: 'line-through' }}>
-                    MRP ₹{originalPrice.toLocaleString('en-IN')}
-                  </Text>
-                  <View style={[styles.savePillBadge, { backgroundColor: '#05966914', borderColor: '#05966935' }]}>
-                    <Text style={{ color: '#059669', fontFamily: fontFamily.sansBold, fontSize: 11, letterSpacing: 0.2 }}>
-                      {discountPct}% OFF
-                    </Text>
-                  </View>
-                </>
-              )}
             </View>
 
             {/* B2B Wholesale Accent Tag */}
@@ -440,7 +428,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
                 <View style={[styles.b2bTag, { backgroundColor: '#05966914', borderColor: '#05966940' }]}>
                   <Text style={{ color: '#059669', fontFamily: fontFamily.sansBold, fontSize: 10.5, letterSpacing: 0.6 }}>
-                    ⚡ WHOLESALE B2B PRICE • SAVE ₹{savings.toLocaleString('en-IN')} / UNIT
+                    ⚡ WHOLESALE B2B PRICE
                   </Text>
                 </View>
               </View>

@@ -998,7 +998,7 @@ export function CheckoutScreen({ navigation }: Props) {
             const isGiftWrapped = giftingItemKeys.includes(giftKey);
             const effectivePrice = getEffectiveUnitPrice(item);
             const originalPrice = getOriginalUnitPrice(item);
-            const hasDiscount = originalPrice > effectivePrice;
+            const hasDiscount = false; // Direct price only for business users
             const imageUrl = item.image ? { uri: item.image } : null;
 
             return (
