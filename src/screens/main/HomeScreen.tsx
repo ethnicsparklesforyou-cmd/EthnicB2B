@@ -36,8 +36,14 @@ import { fetchActivePromoTicker, PromoTickerItem, DEFAULT_B2B_PROMO_ITEMS } from
 import { fetchAddresses } from '../../services/address';
 import { getBannerImageUrl, getFirstImageUrl, prefetchProductImages } from '../../utils/imageUtils';
 import { trackAdModalSwipe } from '../../services/adModalTracker';
+import {
+  fetchAppVersionConfig,
+  isUpdateAvailable,
+  CURRENT_APP_VERSION,
+  type AppVersionInfo,
+} from '../../services/appUpdate';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppIcon, AppGradient, LocationSelectModal } from '../../components/common';
+import { AppIcon, AppGradient, LocationSelectModal, AppUpdateModal } from '../../components/common';
 import { LOCATION_STORAGE_KEY } from '../../components/common/LocationSelectModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1097,6 +1103,8 @@ export function HomeScreen({ navigation }: Props) {
   }
   const [locationLabel, setLocationLabel] = useState('Fetching location...');
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [versionConfig, setVersionConfig] = useState<AppVersionInfo | undefined>(undefined);
   const thumbPos = useRef(new Animated.Value(isDark ? 28 : 0)).current;
   const rotateAnim = useRef(new Animated.Value(isDark ? 1 : 0)).current;
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -1312,19 +1320,38 @@ export function HomeScreen({ navigation }: Props) {
     }
   }, []);
 
+  // Check if app update is required or available for user
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const info = await fetchAppVersionConfig();
+        if (!isMounted) return;
+        setVersionConfig(info);
+        const targetVer = info.minVersion || info.latestVersion;
+        if (isUpdateAvailable(CURRENT_APP_VERSION, targetVer)) {
+          setUpdateModalVisible(true);
+        }
+      } catch (_) {}
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => { loadInitial(); }, [loadInitial]);
 
-  // Show ad modal automatically on first load
+  // Show ad modal automatically on first load (only if update modal is not visible)
   const hasAutoOpenedRef = useRef(false);
   useEffect(() => {
-    if (!loading && !hasAutoOpenedRef.current) {
+    if (!loading && !hasAutoOpenedRef.current && !updateModalVisible) {
       hasAutoOpenedRef.current = true;
       const timer = setTimeout(() => {
         setAdVisible(true);
-      }, 500);
+      }, 600);
       return () => clearTimeout(timer);
     }
-  }, [loading]);
+  }, [loading, updateModalVisible]);
 
   // Auto-scroll banners
   useEffect(() => {
@@ -2175,6 +2202,13 @@ export function HomeScreen({ navigation }: Props) {
         products={newArrivals.length > 0 ? newArrivals : featured.length > 0 ? featured : trending.length > 0 ? trending : expressDrops}
         goProduct={goProduct}
         isDark={isDark}
+      />
+
+      {/* ── App Version Update Modal (Diwali Edition) ── */}
+      <AppUpdateModal
+        visible={updateModalVisible}
+        versionInfo={versionConfig}
+        onDismiss={() => setUpdateModalVisible(false)}
       />
     </View>
   );

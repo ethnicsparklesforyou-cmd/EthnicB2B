@@ -11,4 +11,5 @@ export { AppIcon } from './AppIcon';
 export { AppGradient, PURPLE_PINK_GRADIENT } from './AppGradient';
 export { LocationSelectModal } from './LocationSelectModal';
 export { CountryPickerModal } from './CountryPickerModal';
+export { AppUpdateModal } from './AppUpdateModal';
 

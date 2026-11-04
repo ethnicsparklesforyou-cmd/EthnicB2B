@@ -24,8 +24,8 @@ android {
         applicationId "com.ethnicsparkles.business"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "1.0.11"
+        versionCode 21
+        versionName "1.0.12"
 
         // Fix: use CMake 3.22.1+ with explicit version to avoid gold linker issue
         externalNativeBuild {
