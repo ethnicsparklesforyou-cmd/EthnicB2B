@@ -79,8 +79,11 @@ export async function fetchBanners() {
   return response.json();
 }
 
-export async function fetchActiveBanners() {
-  const response = await fetch(`${API_BASE_URL}banners/fetch-active`);
+export async function fetchActiveBanners(store: string = 'Ethnic Sparkles') {
+  const url = store
+    ? `${API_BASE_URL}banners/fetch-active?store=${encodeURIComponent(store)}`
+    : `${API_BASE_URL}banners/fetch-active`;
+  const response = await fetch(url);
   return response.json();
 }
 

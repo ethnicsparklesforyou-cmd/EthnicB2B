@@ -34,7 +34,7 @@ export function AccountScreen({ navigation }: Props) {
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   const name = user?.name?.trim() || 'Guest User';
-  const phone = user?.phone || '';
+  const phone = user?.phone ? String(user.phone).replace(/^[RB]_/, '').trim() : '';
   const roleLabel = user?.userRole === 2 ? 'Business Account' : 'Retail Account';
 
   const handleWhatsAppSupport = async () => {
@@ -244,7 +244,7 @@ export function AccountScreen({ navigation }: Props) {
 
         {/* App version */}
         <Text style={{ color: colors.textMuted, fontFamily: fontFamily.sans, fontSize: fontSize.xs, textAlign: 'center', marginTop: 24 }}>
-          Ethnic Sparkles Business v1.0.12 · EEAS Lifestyle
+          Ethnic Sparkles Business v1.0.13 · EEAS Lifestyle
         </Text>
 
       </ScrollView>

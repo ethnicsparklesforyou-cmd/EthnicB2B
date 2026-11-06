@@ -132,34 +132,20 @@ export function LoginScreen({ navigation: _navigation }: Props) {
   const handleDismiss = () => {
     if (_navigation.canGoBack()) {
       _navigation.goBack();
-    } else {
-      _navigation.getParent()?.navigate('Main' as never);
     }
   };
 
-  const isRetailAccount = (userData: any): boolean => {
-    if (!userData) return false;
-    const role = Number(userData.userRole ?? userData.role ?? 0);
-    const roleName = String(userData.roleName ?? userData.role_name ?? userData.type ?? '').toLowerCase();
-    return role === 1 || roleName === 'retail' || (role !== 2 && roleName !== 'b2b' && roleName !== 'business');
-  };
-
-  const handleRegister = async (accountType: 'retail' | 'b2b') => {
+  const handleRegister = async (accountType: 'retail' | 'b2b' = 'b2b') => {
     const clean = sanitizePhone(phone, selectedCountry.dial_code);
     try {
       const res = await registerWithPhone({
         phone: clean,
         countryCode: selectedCountry.dial_code,
-        accountType,
+        accountType: 'b2b',
+        portal: 'b2b',
       });
       const payload = (res.json as any)?.data;
       if (res.ok && payload?.user && payload?.token) {
-        if (isRetailAccount(payload.user)) {
-          setError('This mobile number is registered as a Retail Customer account. Please use the Ethnics Retail App to sign in, or register with a Business mobile number.');
-          setLoading(false);
-          otpRef.current?.reset();
-          return;
-        }
         await migrateCart(payload.user.id);
         await login(payload.user, payload.token);
         handleDismiss();
@@ -186,15 +172,11 @@ export function LoginScreen({ navigation: _navigation }: Props) {
         countryCode: selectedCountry.dial_code,
         otpCode: otp,
         isLoginAuth: true,
+        portal: 'b2b',
+        accountType: 'b2b',
       });
       const payload = (res.json as any)?.data;
       if (res.ok && payload?.isExist && payload?.user && payload?.token) {
-        if (isRetailAccount(payload.user)) {
-          setError('This mobile number is registered as a Retail Customer account. Please use the Ethnics Retail App to sign in, or register with a Business mobile number.');
-          setLoading(false);
-          otpRef.current?.reset();
-          return;
-        }
         await migrateCart(payload.user.id);
         await login(payload.user, payload.token);
         handleDismiss();
@@ -293,9 +275,6 @@ export function LoginScreen({ navigation: _navigation }: Props) {
                 {step === 'phone' ? 'STEP 1 OF 2' : 'STEP 2 OF 2'}
               </Text>
             </View>
-            <TouchableOpacity onPress={handleDismiss} style={styles.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <AppIcon name="close" color={colors.textMuted} size={22} />
-            </TouchableOpacity>
           </View>
 
           <View style={[styles.sheetBody, { paddingHorizontal: spacing[5] }]}>

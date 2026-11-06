@@ -21,10 +21,11 @@ export function ProfileScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const cleanPhone = (p?: string | null) => (p ? String(p).replace(/^[RB]_/, '').trim() : '');
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
-    if (user) setForm({ name: user.name || '', email: user.email || '', phone: user.phone || '' });
+    if (user) setForm({ name: user.name || '', email: user.email || '', phone: cleanPhone(user.phone) });
   }, [user]);
 
   if (!user) {
@@ -88,11 +89,12 @@ export function ProfileScreen({ navigation }: Props) {
   };
 
   const roleLabel = user.userRole === 2 ? 'Business Account' : 'Retail Account';
+  const displayPhone = cleanPhone(user.phone);
 
   const INFO_ROWS = [
     { icon: 'account-outline', label: 'Full Name', value: user.name || '—' },
     { icon: 'email-outline', label: 'Email', value: user.email || 'Not provided' },
-    { icon: 'cellphone', label: 'Phone', value: user.phone ? `+91 ${user.phone}` : '—' },
+    { icon: 'cellphone', label: 'Phone', value: displayPhone ? `+91 ${displayPhone}` : '—' },
     { icon: 'tag-outline', label: 'Account Type', value: roleLabel },
   ];
 
@@ -105,7 +107,7 @@ export function ProfileScreen({ navigation }: Props) {
         actions={[{
           label: editing ? 'Cancel' : 'Edit',
           onPress: () => {
-            if (editing) setForm({ name: user.name || '', email: user.email || '', phone: user.phone || '' });
+            if (editing) setForm({ name: user.name || '', email: user.email || '', phone: cleanPhone(user.phone) });
             setEditing(v => !v);
           },
           accessibilityLabel: editing ? 'Cancel editing' : 'Edit profile',

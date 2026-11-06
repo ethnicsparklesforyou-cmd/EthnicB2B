@@ -1,7 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import { API_BASE_URL } from './api';
 
-export const CURRENT_APP_VERSION = '1.0.12';
+export const CURRENT_APP_VERSION = '1.0.13';
 
 export interface AppVersionInfo {
   latestVersion: string;
@@ -16,8 +16,8 @@ export interface AppVersionInfo {
 }
 
 export const DEFAULT_B2B_VERSION_CONFIG: AppVersionInfo = {
-  latestVersion: '1.0.12',
-  minVersion: '1.0.12',
+  latestVersion: '1.0.13',
+  minVersion: '1.0.13',
   forceUpdate: false,
   title: 'Diwali Festive Update! 🪔',
   message:

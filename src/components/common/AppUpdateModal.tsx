@@ -55,7 +55,7 @@ export function AppUpdateModal({
   if (!visible) return null;
 
   const force = versionInfo?.forceUpdate ?? false;
-  const targetVer = versionInfo?.latestVersion || '1.0.12';
+  const targetVer = versionInfo?.latestVersion || '1.0.13';
   const isIos = Platform.OS === 'ios';
 
   const handleUpdate = () => {

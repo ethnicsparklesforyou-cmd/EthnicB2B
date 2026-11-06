@@ -732,7 +732,7 @@ export function CheckoutScreen({ navigation }: Props) {
         prefill: {
           name: profileName || user?.name || '',
           email: user?.email || '',
-          contact: user?.phone || '',
+          contact: user?.phone ? String(user.phone).replace(/^[RB]_/, '').trim() : '',
         },
       } as any);
 
@@ -809,7 +809,7 @@ export function CheckoutScreen({ navigation }: Props) {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <AppIcon name="phone-outline" size={12} color={colors.textMuted} />
                 <Text style={{ color: colors.textMuted, fontFamily: fontFamily.sansMedium, fontSize: 11 }}>
-                  {user.phone}
+                  {String(user.phone).replace(/^[RB]_/, '').trim()}
                 </Text>
               </View>
             ) : null}
@@ -897,7 +897,7 @@ export function CheckoutScreen({ navigation }: Props) {
                   </Text>
                   {user?.phone ? (
                     <Text style={[styles.recipientPhoneText, { color: colors.textMuted, fontFamily: fontFamily.sansMedium }]}>
-                      • {user.phone}
+                      • {String(user.phone).replace(/^[RB]_/, '').trim()}
                     </Text>
                   ) : null}
                 </View>

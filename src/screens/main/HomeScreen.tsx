@@ -1245,7 +1245,7 @@ export function HomeScreen({ navigation }: Props) {
   const loadInitial = useCallback(async () => {
     try {
       const [banRes, catRes, prodsRes, sectionsRes, promoRes] = await Promise.allSettled([
-        fetchActiveBanners(),
+        fetchActiveBanners('Ethnic Sparkles'),
         fetchCategories(),
         fetchProducts({ page: 1, limit: 32, sortBy: 'createAt', sortOrder: 'DESC' }),
         fetchAllHomeSections('b2b'),

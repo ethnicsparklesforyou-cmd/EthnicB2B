@@ -31,6 +31,15 @@ interface AuthContextValue {
 const AUTH_KEY = '@jwellery_auth';
 const GUEST_CART_KEY = '@jwellery_guest_cart';
 
+const cleanPhone = (p?: string | null) => (p ? String(p).replace(/^[RB]_/, '').trim() : p);
+const cleanUser = <T extends Partial<User>>(u: T | null): T | null => {
+  if (!u) return null;
+  return {
+    ...u,
+    phone: cleanPhone(u.phone) as any,
+  };
+};
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -43,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(raw => {
         if (raw) {
           const parsed = JSON.parse(raw) as { user: User; token: string };
-          setUser(parsed.user);
+          setUser(cleanUser(parsed.user));
           setToken(parsed.token);
         }
       })
@@ -51,9 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (u: Omit<User, 'token'>, t: string) => {
-    setUser({ ...u, token: t });
+    const safeUser = cleanUser(u)!;
+    setUser({ ...safeUser, token: t });
     setToken(t);
-    await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ user: { ...u, token: t }, token: t }));
+    await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ user: { ...safeUser, token: t }, token: t }));
   }, []);
 
   const logout = useCallback(async () => {
@@ -66,7 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback((partial: Partial<User>) => {
     setUser(prev => {
       if (!prev) return prev;
-      const updated = { ...prev, ...partial };
+      const safePartial = cleanUser(partial);
+      const updated = { ...prev, ...safePartial };
       AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ user: updated, token: updated.token })).catch(() => {});
       return updated;
     });

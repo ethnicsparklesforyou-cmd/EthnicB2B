@@ -1,6 +1,7 @@
 export const sanitizePhone = (phone: string, dialCode = '+91') => {
   if (!phone) return '';
-  let digits = phone.replace(/\D/g, '');
+  const stripped = String(phone).replace(/^[RB]_/, '');
+  let digits = stripped.replace(/\D/g, '');
   if (dialCode === '+91' || dialCode === '91') {
     if (digits.length === 12 && digits.startsWith('91')) {
       digits = digits.slice(2);
@@ -33,11 +34,15 @@ export const isValidPassword = (pw: string) => pw.length >= 6;
 export const formatCurrency = (amount: number) =>
   `₹${amount.toLocaleString('en-IN')}`;
 
-export const formatPhone = (phone: string) =>
-  phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+export const formatPhone = (phone: string) => {
+  const clean = String(phone || '').replace(/^[RB]_/, '').trim();
+  return clean.replace(/(\d{5})(\d{5})/, '$1 $2');
+};
 
-export const maskPhone = (phone: string) =>
-  phone.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2');
+export const maskPhone = (phone: string) => {
+  const clean = String(phone || '').replace(/^[RB]_/, '').trim();
+  return clean.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2');
+};
 
 // ─── String helpers ───────────────────────────────────────────────────────────
 
